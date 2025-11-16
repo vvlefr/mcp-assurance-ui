@@ -70,3 +70,9 @@
 - [x] Ajouter les questions pour les champs critiques (fumeur, encours crédits, durée, revenu)
 - [ ] Implémenter un système de questions progressives
 - [ ] Valider les réponses avant de générer le devis
+
+
+## Bug - Erreur dans le traitement du message
+- [x] Corriger l'extraction de contenu de la réponse LLM
+- [x] Ajouter une gestion d'erreur robuste pour les réponses LLM
+- [ ] Tester avec différents formats de réponse

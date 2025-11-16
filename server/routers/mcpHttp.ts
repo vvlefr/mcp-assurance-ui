@@ -99,10 +99,25 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte supplémentaire.`;
           },
         });
 
+        // Gestion robuste de la réponse LLM
+        if (!extractionResponse.choices || !extractionResponse.choices[0] || !extractionResponse.choices[0].message) {
+          throw new Error("Réponse LLM invalide: structure inattendue");
+        }
+
         const content = extractionResponse.choices[0].message.content;
-        const extractedInfo = JSON.parse(
-          typeof content === "string" ? content : "{}"
-        );
+        if (!content) {
+          throw new Error("Réponse LLM vide");
+        }
+
+        let extractedInfo;
+        try {
+          extractedInfo = JSON.parse(
+            typeof content === "string" ? content : "{}"
+          );
+        } catch (parseError) {
+          console.error("Erreur lors du parsing JSON:", content);
+          throw new Error("Impossible de parser la réponse LLM");
+        }
 
         // Étape 2: Si le client dit être existant, interroger le CRM
         let clientData = null;
