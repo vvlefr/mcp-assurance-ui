@@ -60,6 +60,9 @@ export default function TestChat() {
     });
   };
 
+  // Appeler le workflow intelligent MCP
+  const processMCPMessageMutation = trpc.mcpChat.processMessage.useMutation();
+
   const handleSendMessage = async (message: string) => {
     if (!sessionId) return;
 
@@ -76,8 +79,16 @@ export default function TestChat() {
         isAdmin: 0,
       });
 
-      // Simuler une réponse de l'assistant
-      const assistantResponse = `Vous avez demandé : "${message}". Je traiterais cela avec le serveur MCP.`;
+      // Appeler le workflow intelligent MCP
+      const mcpResponse = await processMCPMessageMutation.mutateAsync({
+        message,
+        sessionId: parseInt(sessionId.split('-')[1]) || 0,
+      });
+
+      const assistantResponse = mcpResponse.success 
+        ? mcpResponse.message 
+        : `Désolé, une erreur s'est produite: ${mcpResponse.message}`;
+      
       setMessages((prev) => [...prev, { role: "assistant", content: assistantResponse }]);
 
       // Sauvegarder la réponse en base de données

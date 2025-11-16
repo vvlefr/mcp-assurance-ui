@@ -50,3 +50,10 @@
 - [x] Ajouter les outils MCP pour Zenioo (devis, souscription)
 - [x] Tester la connexion à l'API Zenioo
 - [ ] Intégrer Zenioo dans le chat de test
+
+## Workflow Chat Intelligent
+- [x] Consulter la documentation Zenioo pour connaître les endpoints et champs requis
+- [x] Créer une procédure tRPC pour interroger le CRM et récupérer les données client
+- [x] Créer une procédure tRPC pour appeler les outils MCP
+- [x] Implémenter la logique de demande d'informations manquantes
+- [x] Intégrer le workflow complet dans le chat de test
