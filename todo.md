@@ -44,3 +44,9 @@
 - [x] Ajouter les endpoints CRM (clients, contrats, devis)
 - [x] Tester la connexion à l'API CRM
 - [ ] Intégrer les outils CRM dans le chat de test
+
+## Intégration Assureur Zenioo
+- [x] Créer l'adaptateur pour l'API assureur Zenioo
+- [x] Ajouter les outils MCP pour Zenioo (devis, souscription)
+- [x] Tester la connexion à l'API Zenioo
+- [ ] Intégrer Zenioo dans le chat de test
