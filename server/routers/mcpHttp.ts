@@ -26,6 +26,83 @@ async function searchClientInCRM(name: string): Promise<any> {
   }
 }
 
+// Fonction pour extraire les informations du message avec un prompt simple
+async function extractInfoFromMessage(message: string): Promise<any> {
+  const extractionPrompt = `Analyse ce message et extrais les informations au format JSON.
+Message: "${message}"
+
+Extrais:
+- nom_complet: Nom complet (ou null)
+- type_assurance: Type d'assurance demandé (auto, habitation, pret, sante, etc.)
+- montant_pret: Montant en euros (ou null)
+- date_signature: Date (ou null)
+- type_bien: Type de bien (ou null)
+- est_client_existant: true si mentionne être client (true/false)
+- fumeur: true/false/null
+- encours_credits: true/false/null
+- duree_pret: Durée en années (ou null)
+- revenu_mensuel: Revenu en euros (ou null)
+
+Réponds UNIQUEMENT avec un objet JSON valide sur une seule ligne.`;
+
+  try {
+    const response = await invokeLLM({
+      messages: [
+        {
+          role: "system",
+          content:
+            "Tu es un extracteur d'informations. Réponds UNIQUEMENT en JSON valide sur une seule ligne, sans explications.",
+        },
+        {
+          role: "user",
+          content: extractionPrompt,
+        },
+      ],
+    });
+
+    // Récupérer le contenu de la réponse
+    if (!response.choices || !response.choices[0] || !response.choices[0].message) {
+      console.error("Réponse LLM invalide:", response);
+      return {
+        nom_complet: null,
+        type_assurance: "pret",
+        est_client_existant: false,
+      };
+    }
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      console.error("Contenu LLM vide");
+      return {
+        nom_complet: null,
+        type_assurance: "pret",
+        est_client_existant: false,
+      };
+    }
+
+    // Convertir en string si nécessaire
+    const contentStr = typeof content === "string" ? content : JSON.stringify(content);
+
+    // Parser le JSON
+    const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error("Pas de JSON trouvé dans la réponse:", contentStr);
+      // Essayer de parser directement
+      return JSON.parse(contentStr);
+    }
+
+    const extractedInfo = JSON.parse(jsonMatch[0]);
+    return extractedInfo;
+  } catch (error: any) {
+    console.error("Erreur lors de l'extraction:", error.message);
+    return {
+      nom_complet: null,
+      type_assurance: "pret",
+      est_client_existant: false,
+    };
+  }
+}
+
 export const mcpHttpRouter = router({
   /**
    * Procédure pour traiter un message utilisateur avec le serveur HTTP MCP
@@ -41,83 +118,8 @@ export const mcpHttpRouter = router({
       const { message } = input;
 
       try {
-        // Étape 1: Utiliser l'IA pour extraire les informations du message
-        const extractionPrompt = `Tu es un assistant d'extraction d'informations pour un courtier en assurance.
-Analyse le message suivant et extrait les informations pertinentes au format JSON.
-
-Message: "${message}"
-
-Extrait les informations suivantes si disponibles:
-- nom_complet: Nom complet du client (ex: "GUILLAUME BIDOUX")
-- type_assurance: Type d'assurance demandé (auto, habitation, pret, sante, etc.)
-- montant_pret: Montant du prêt en euros (ex: 300000)
-- date_signature: Date de signature (ex: "2025-11-25")
-- type_bien: Type de bien (appartement, maison, résidence principale/secondaire)
-- est_client_existant: true si la personne mentionne être déjà client
-- fumeur: true/false si mentionné
-- encours_credits: true/false si mentionné
-- duree_pret: Durée du prêt en années si mentionnée
-- revenu_mensuel: Revenu mensuel en euros si mentionné
-
-Réponds UNIQUEMENT avec un objet JSON valide, sans texte supplémentaire.`;
-
-        const extractionResponse = await invokeLLM({
-          messages: [
-            {
-              role: "system",
-              content:
-                "Tu es un assistant qui extrait des informations structurées. Tu réponds UNIQUEMENT en JSON valide.",
-            },
-            {
-              role: "user",
-              content: extractionPrompt,
-            },
-          ],
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: "extraction_info",
-              strict: true,
-              schema: {
-                type: "object",
-                properties: {
-                  nom_complet: { type: "string" },
-                  type_assurance: { type: "string" },
-                  montant_pret: { type: ["number", "null"] },
-                  date_signature: { type: ["string", "null"] },
-                  type_bien: { type: ["string", "null"] },
-                  est_client_existant: { type: "boolean" },
-                  fumeur: { type: ["boolean", "null"] },
-                  encours_credits: { type: ["boolean", "null"] },
-                  duree_pret: { type: ["number", "null"] },
-                  revenu_mensuel: { type: ["number", "null"] },
-                },
-                required: ["nom_complet", "type_assurance"],
-                additionalProperties: false,
-              },
-            },
-          },
-        });
-
-        // Gestion robuste de la réponse LLM
-        if (!extractionResponse.choices || !extractionResponse.choices[0] || !extractionResponse.choices[0].message) {
-          throw new Error("Réponse LLM invalide: structure inattendue");
-        }
-
-        const content = extractionResponse.choices[0].message.content;
-        if (!content) {
-          throw new Error("Réponse LLM vide");
-        }
-
-        let extractedInfo;
-        try {
-          extractedInfo = JSON.parse(
-            typeof content === "string" ? content : "{}"
-          );
-        } catch (parseError) {
-          console.error("Erreur lors du parsing JSON:", content);
-          throw new Error("Impossible de parser la réponse LLM");
-        }
+        // Étape 1: Extraire les informations du message
+        const extractedInfo = await extractInfoFromMessage(message);
 
         // Étape 2: Si le client dit être existant, interroger le CRM
         let clientData = null;
@@ -195,7 +197,7 @@ Je vois que vous êtes déjà client chez nous. Je vais préparer votre devis d'
             responseMessage += `\n\n✅ Toutes les informations nécessaires sont disponibles. Génération de votre devis en cours...`;
           }
         } else {
-          responseMessage = `Bonjour ${extractedInfo.nom_complet} !
+          responseMessage = `Bonjour ${extractedInfo.nom_complet || "client"} !
 
 Je comprends que vous souhaitez un devis pour une assurance de prêt immobilier.
 

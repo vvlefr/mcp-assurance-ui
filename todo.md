@@ -75,4 +75,5 @@
 ## Bug - Erreur dans le traitement du message
 - [x] Corriger l'extraction de contenu de la réponse LLM
 - [x] Ajouter une gestion d'erreur robuste pour les réponses LLM
+- [x] Simplifier le prompt LLM sans response_format strict
 - [ ] Tester avec différents formats de réponse
