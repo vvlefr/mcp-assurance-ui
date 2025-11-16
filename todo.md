@@ -38,3 +38,9 @@
 - [x] Responsive design
 - [ ] Thème clair/sombre
 - [ ] Accessibilité
+
+## Intégration CRM
+- [x] Créer l'adaptateur CRM pour le serveur MCP
+- [x] Ajouter les endpoints CRM (clients, contrats, devis)
+- [x] Tester la connexion à l'API CRM
+- [ ] Intégrer les outils CRM dans le chat de test
