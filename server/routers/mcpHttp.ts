@@ -54,6 +54,10 @@ Extrait les informations suivantes si disponibles:
 - date_signature: Date de signature (ex: "2025-11-25")
 - type_bien: Type de bien (appartement, maison, résidence principale/secondaire)
 - est_client_existant: true si la personne mentionne être déjà client
+- fumeur: true/false si mentionné
+- encours_credits: true/false si mentionné
+- duree_pret: Durée du prêt en années si mentionnée
+- revenu_mensuel: Revenu mensuel en euros si mentionné
 
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte supplémentaire.`;
 
@@ -79,10 +83,14 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte supplémentaire.`;
                 properties: {
                   nom_complet: { type: "string" },
                   type_assurance: { type: "string" },
-                  montant_pret: { type: "number" },
-                  date_signature: { type: "string" },
-                  type_bien: { type: "string" },
+                  montant_pret: { type: ["number", "null"] },
+                  date_signature: { type: ["string", "null"] },
+                  type_bien: { type: ["string", "null"] },
                   est_client_existant: { type: "boolean" },
+                  fumeur: { type: ["boolean", "null"] },
+                  encours_credits: { type: ["boolean", "null"] },
+                  duree_pret: { type: ["number", "null"] },
+                  revenu_mensuel: { type: ["number", "null"] },
                 },
                 required: ["nom_complet", "type_assurance"],
                 additionalProperties: false,
@@ -110,14 +118,20 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte supplémentaire.`;
         const requiredFields: Record<string, any> = {
           date_naissance: clientData?.birth_date || null,
           code_postal: clientData?.postal_code || null,
-          statut_professionnel:
-            clientData?.professional_category || null,
+          statut_professionnel: clientData?.professional_category || null,
           montant_pret: extractedInfo.montant_pret || null,
           date_effet: extractedInfo.date_signature || null,
+          fumeur: extractedInfo.fumeur !== null ? extractedInfo.fumeur : null,
+          encours_credits:
+            extractedInfo.encours_credits !== null
+              ? extractedInfo.encours_credits
+              : null,
+          duree_pret: extractedInfo.duree_pret || null,
+          revenu_mensuel: extractedInfo.revenu_mensuel || null,
         };
 
         const missingFields = Object.entries(requiredFields)
-          .filter(([_, value]) => !value)
+          .filter(([_, value]) => value === null || value === undefined)
           .map(([key]) => key);
 
         // Étape 4: Générer une réponse appropriée
@@ -130,7 +144,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte supplémentaire.`;
             : "Non disponible";
 
           responseMessage = `Bonjour ${clientData.first_name} ${clientData.last_name} ! 
-          
+
 Je vois que vous êtes déjà client chez nous. Je vais préparer votre devis d'assurance de prêt immobilier.
 
 **Informations récupérées de votre dossier:**
@@ -145,17 +159,23 @@ Je vois que vous êtes déjà client chez nous. Je vais préparer votre devis d'
 - Type de bien: ${extractedInfo.type_bien || "Résidence principale"}`;
 
           if (missingFields.length > 0) {
-            responseMessage += `\n\n**Informations complémentaires nécessaires:**\n`;
+            responseMessage += `\n\n**Informations complémentaires nécessaires pour générer votre devis:**\n`;
             const fieldLabels: Record<string, string> = {
               date_naissance: "Votre date de naissance",
               code_postal: "Votre code postal",
               statut_professionnel: "Votre statut professionnel",
               montant_pret: "Le montant du prêt",
               date_effet: "La date de prise d'effet souhaitée",
+              fumeur: "Êtes-vous fumeur ?",
+              encours_credits:
+                "Avez-vous un encours total de crédits supérieur à 200 000€ ?",
+              duree_pret: "Quelle est la durée souhaitée du prêt (en années) ?",
+              revenu_mensuel: "Quel est votre revenu mensuel net ?",
             };
-            missingFields.forEach((field) => {
-              responseMessage += `- ${fieldLabels[field] || field}\n`;
-            });
+            responseMessage += missingFields
+              .map((field) => `- ${fieldLabels[field] || field}`)
+              .join("\n");
+            responseMessage += `\n\nPouvez-vous me fournir ces informations ?`;
           } else {
             responseMessage += `\n\n✅ Toutes les informations nécessaires sont disponibles. Génération de votre devis en cours...`;
           }
@@ -175,6 +195,8 @@ Je comprends que vous souhaitez un devis pour une assurance de prêt immobilier.
 - Votre statut professionnel (salarié, cadre, libéral, etc.)
 - Êtes-vous fumeur ?
 - Avez-vous un encours total de crédits supérieur à 200 000€ ?
+- Quelle est la durée souhaitée du prêt (en années) ?
+- Quel est votre revenu mensuel net ?
 
 Pouvez-vous me fournir ces informations ?`;
         }

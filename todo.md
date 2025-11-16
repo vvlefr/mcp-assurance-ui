@@ -64,3 +64,9 @@
 - [x] Mettre à jour le backend Node.js pour appeler les endpoints HTTP
 - [x] Tester la récupération des données du CRM via HTTP
 - [ ] Tester l'appel à l'API Zenioo via HTTP
+
+## Correction - Détection des champs manquants
+- [x] Améliorer la logique de détection des champs manquants pour Zenioo
+- [x] Ajouter les questions pour les champs critiques (fumeur, encours crédits, durée, revenu)
+- [ ] Implémenter un système de questions progressives
+- [ ] Valider les réponses avant de générer le devis
