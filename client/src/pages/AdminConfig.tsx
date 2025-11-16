@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Trash2, Edit2 } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AIConfigChat } from "@/components/AIConfigChat";
 
 export default function AdminConfig() {
   const { user, isAuthenticated } = useAuth();
@@ -31,7 +32,6 @@ export default function AdminConfig() {
     onSuccess: () => {
       setFormData({ assureurName: "", apiKey: "", baseUrl: "", apiType: "" });
       setIsDialogOpen(false);
-      // Invalider le cache
       trpc.useUtils().apiConfig.list.invalidate();
     },
   });
@@ -89,6 +89,16 @@ export default function AdminConfig() {
     setFormData({ assureurName: "", apiKey: "", baseUrl: "", apiType: "" });
   };
 
+  const handleConfigExtracted = (config: any) => {
+    setFormData({
+      assureurName: config.assureurName,
+      apiKey: config.apiKey,
+      baseUrl: config.baseUrl,
+      apiType: config.apiType,
+    });
+    createConfigMutation.mutate(config);
+  };
+
   if (!isAuthenticated || user?.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -107,6 +117,9 @@ export default function AdminConfig() {
           </p>
         </div>
 
+        {/* Chat IA pour ajouter des configurations */}
+        <AIConfigChat onConfigExtracted={handleConfigExtracted} />
+
         {/* Bouton Ajouter */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -114,7 +127,7 @@ export default function AdminConfig() {
               setEditingId(null);
               setFormData({ assureurName: "", apiKey: "", baseUrl: "", apiType: "" });
             }}>
-              Ajouter une Configuration
+              Ajouter une Configuration Manuelle
             </Button>
           </DialogTrigger>
           <DialogContent>

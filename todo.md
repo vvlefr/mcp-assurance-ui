@@ -11,7 +11,7 @@
 ## Frontend Admin (Paramétrage par IA)
 - [x] Authentification admin (role-based)
 - [x] Dashboard admin avec navigation
-- [ ] Interface de chat pour ajouter des configurations API
+- [x] Interface de chat IA pour ajouter des configurations API
 - [x] Formulaire pour configurer les clés API des assureurs
 - [x] Gestion des configurations sauvegardées
 - [ ] Historique des modifications
@@ -20,7 +20,7 @@
 ## Backend (tRPC Procedures)
 - [x] Procédure pour appeler les outils MCP
 - [x] Procédure pour gérer les configurations API
-- [ ] Procédure pour utiliser l'IA pour interpréter les instructions
+- [x] Procédure pour utiliser l'IA pour interpréter les instructions
 - [x] Procédure pour sauvegarder les configurations en BD
 
 ## Base de données
