@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, apiConfigs, InsertApiConfig, chatMessages, InsertChatMessage, chatSessions, InsertChatSession } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,58 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function getApiConfigsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(apiConfigs).where(eq(apiConfigs.userId, userId));
+}
+
+export async function createApiConfig(config: InsertApiConfig) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(apiConfigs).values(config);
+}
+
+export async function updateApiConfig(id: number, config: Partial<InsertApiConfig>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(apiConfigs).set(config).where(eq(apiConfigs.id, id));
+}
+
+export async function deleteApiConfig(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(apiConfigs).where(eq(apiConfigs.id, id));
+}
+
+export async function getChatMessages(sessionId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(chatMessages).where(eq(chatMessages.chatSessionId, sessionId)).orderBy(chatMessages.createdAt);
+}
+
+export async function createChatMessage(message: InsertChatMessage) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(chatMessages).values(message);
+}
+
+export async function getChatSessionsList(userId: number, isAdmin: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(chatSessions).where(
+    and(eq(chatSessions.userId, userId), eq(chatSessions.isAdmin, isAdmin))
+  ).orderBy(desc(chatSessions.updatedAt));
+}
+
+export async function createChatSession(session: InsertChatSession) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(chatSessions).values(session);
+}
+
+export async function updateChatSession(id: number, session: Partial<InsertChatSession>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(chatSessions).set(session).where(eq(chatSessions.id, id));
+}
