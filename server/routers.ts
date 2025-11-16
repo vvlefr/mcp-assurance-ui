@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
-import { mcpChatRouter } from "./routers/mcpChat";
+import { mcpHttpRouter } from "./routers/mcpHttp";
 import { z } from "zod";
 import { getChatSessionsList, createChatSession, getChatMessages, createChatMessage } from "./db";
 import { apiConfigRouter } from "./routers/apiConfig";
@@ -73,7 +73,7 @@ export const appRouter = router({
   }),
 
   apiConfig: apiConfigRouter,
-  mcpChat: mcpChatRouter,
+  mcpChat: mcpHttpRouter,
 });
 
 export type AppRouter = typeof appRouter;

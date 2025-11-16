@@ -57,3 +57,10 @@
 - [x] Créer une procédure tRPC pour appeler les outils MCP
 - [x] Implémenter la logique de demande d'informations manquantes
 - [x] Intégrer le workflow complet dans le chat de test
+
+## Transformation du serveur MCP en HTTP
+- [x] Ajouter un serveur HTTP au serveur MCP Python
+- [x] Créer des endpoints REST pour chaque outil MCP
+- [x] Mettre à jour le backend Node.js pour appeler les endpoints HTTP
+- [x] Tester la récupération des données du CRM via HTTP
+- [ ] Tester l'appel à l'API Zenioo via HTTP
