@@ -1,0 +1,23 @@
+CREATE TABLE `chat_contexts` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`sessionId` int NOT NULL,
+	`userId` int NOT NULL,
+	`nomComplet` varchar(255),
+	`dateNaissance` varchar(20),
+	`codePostal` varchar(10),
+	`statutProfessionnel` varchar(100),
+	`email` varchar(320),
+	`telephone` varchar(20),
+	`typeAssurance` varchar(50),
+	`montantPret` int,
+	`dateSignature` varchar(20),
+	`typeBien` varchar(100),
+	`fumeur` int,
+	`encoursCredits` int,
+	`dureePret` int,
+	`revenuMensuel` int,
+	`clientDataJson` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `chat_contexts_id` PRIMARY KEY(`id`)
+);

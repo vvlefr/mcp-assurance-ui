@@ -77,3 +77,35 @@ export const chatSessions = mysqlTable("chat_sessions", {
 
 export type ChatSession = typeof chatSessions.$inferSelect;
 export type InsertChatSession = typeof chatSessions.$inferInsert;
+
+/**
+ * Table pour stocker le contexte des sessions de chat (informations collectées)
+ */
+export const chatContexts = mysqlTable("chat_contexts", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull(),
+  userId: int("userId").notNull(),
+  // Informations client
+  nomComplet: varchar("nomComplet", { length: 255 }),
+  dateNaissance: varchar("dateNaissance", { length: 20 }),
+  codePostal: varchar("codePostal", { length: 10 }),
+  statutProfessionnel: varchar("statutProfessionnel", { length: 100 }),
+  email: varchar("email", { length: 320 }),
+  telephone: varchar("telephone", { length: 20 }),
+  // Informations assurance
+  typeAssurance: varchar("typeAssurance", { length: 50 }),
+  montantPret: int("montantPret"),
+  dateSignature: varchar("dateSignature", { length: 20 }),
+  typeBien: varchar("typeBien", { length: 100 }),
+  fumeur: int("fumeur"), // 0 = non, 1 = oui, null = non répondu
+  encoursCredits: int("encoursCredits"), // 0 = non, 1 = oui, null = non répondu
+  dureePret: int("dureePret"), // en mois
+  revenuMensuel: int("revenuMensuel"),
+  // Métadonnées
+  clientDataJson: text("clientDataJson"), // Données complètes du CRM en JSON
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ChatContext = typeof chatContexts.$inferSelect;
+export type InsertChatContext = typeof chatContexts.$inferInsert;

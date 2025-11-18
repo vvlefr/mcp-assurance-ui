@@ -2,17 +2,29 @@ import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { searchClientByName, getAllClients, getAllContracts, getAllQuotes } from "../api/crmApi";
+import {
+  getSessionContext,
+  upsertSessionContext,
+  mergeContextData,
+  getMissingFields,
+  formatContextForDisplay,
+} from "../api/chatContext";
 
 /**
  * Routeur pour le workflow du chat intelligent avec intégration directe des API
  */
 
 // Fonction pour extraire les informations du message avec un prompt simple
-async function extractInfoFromMessage(message: string): Promise<any> {
-  const extractionPrompt = `Analyse ce message et extrais les informations au format JSON.
+async function extractInfoFromMessage(message: string, existingContext: any = null): Promise<any> {
+  const contextInfo = existingContext
+    ? `\nInformations déjà collectées:\n${JSON.stringify(existingContext, null, 2)}`
+    : "";
+
+  const extractionPrompt = `Analyse ce message et extrais UNIQUEMENT les NOUVELLES informations au format JSON.${contextInfo}
+
 Message: "${message}"
 
-Extrais:
+Extrais UNIQUEMENT les informations mentionnées dans ce message (ne répète pas les informations déjà collectées):
 - nom_complet: Nom complet (ou null)
 - type_assurance: Type d'assurance demandé (auto, habitation, pret, sante, etc.)
 - montant_pret: Montant en euros (ou null)
@@ -21,7 +33,7 @@ Extrais:
 - est_client_existant: true si mentionne être client (true/false)
 - fumeur: true/false/null
 - encours_credits: true/false/null
-- duree_pret: Durée en années (ou null)
+- duree_pret: Durée en mois (ou null)
 - revenu_mensuel: Revenu en euros (ou null)
 
 Réponds UNIQUEMENT avec un objet JSON valide sur une seule ligne.`;
@@ -86,7 +98,7 @@ Réponds UNIQUEMENT avec un objet JSON valide sur une seule ligne.`;
 
 export const mcpHttpRouter = router({
   /**
-   * Procédure pour traiter un message utilisateur avec le serveur HTTP MCP
+   * Procédure pour traiter un message utilisateur avec gestion du contexte conversationnel
    */
   processMessage: protectedProcedure
     .input(
@@ -95,48 +107,50 @@ export const mcpHttpRouter = router({
         sessionId: z.number(),
       })
     )
-    .mutation(async ({ input }) => {
-      const { message } = input;
+    .mutation(async ({ input, ctx }) => {
+      const { message, sessionId } = input;
 
       try {
-        // Étape 1: Extraire les informations du message
-        const extractedInfo = await extractInfoFromMessage(message);
+        // Étape 1: Récupérer le contexte existant
+        const existingContext = await getSessionContext(sessionId);
 
-        // Étape 2: Si le client dit être existant, interroger le CRM
+        // Étape 2: Extraire les nouvelles informations du message
+        const extractedInfo = await extractInfoFromMessage(message, existingContext);
+
+        // Étape 3: Si le client dit être existant et qu'on n'a pas encore ses données, interroger le CRM
         let clientData = null;
-        if (extractedInfo.est_client_existant && extractedInfo.nom_complet) {
+        if (extractedInfo.est_client_existant && extractedInfo.nom_complet && !existingContext?.clientDataJson) {
           const crmResult = await searchClientByName(extractedInfo.nom_complet);
 
           if (crmResult.success && crmResult.data && crmResult.data.length > 0) {
-            clientData = crmResult.data[0]; // Prendre le premier résultat
+            clientData = crmResult.data[0];
+            extractedInfo.clientDataJson = JSON.stringify(clientData);
+            // Pré-remplir avec les données du CRM
+            extractedInfo.date_naissance = clientData.birth_date;
+            extractedInfo.code_postal = clientData.postal_code;
+            extractedInfo.statut_professionnel = clientData.professional_category;
+            extractedInfo.email = clientData.email;
+            extractedInfo.telephone = clientData.phone;
           }
+        } else if (existingContext?.clientDataJson) {
+          // Récupérer les données CRM du contexte existant
+          clientData = JSON.parse(existingContext.clientDataJson);
         }
 
-        // Étape 3: Déterminer les informations manquantes pour Zenioo
-        const requiredFields: Record<string, any> = {
-          date_naissance: clientData?.birth_date || null,
-          code_postal: clientData?.postal_code || null,
-          statut_professionnel: clientData?.professional_category || null,
-          montant_pret: extractedInfo.montant_pret || null,
-          date_effet: extractedInfo.date_signature || null,
-          fumeur: extractedInfo.fumeur !== null ? extractedInfo.fumeur : null,
-          encours_credits:
-            extractedInfo.encours_credits !== null
-              ? extractedInfo.encours_credits
-              : null,
-          duree_pret: extractedInfo.duree_pret || null,
-          revenu_mensuel: extractedInfo.revenu_mensuel || null,
-        };
+        // Étape 4: Fusionner avec le contexte existant
+        const mergedData = mergeContextData(existingContext, extractedInfo);
 
-        const missingFields = Object.entries(requiredFields)
-          .filter(([_, value]) => value === null || value === undefined)
-          .map(([key]) => key);
+        // Étape 5: Mettre à jour le contexte en base de données
+        const updatedContext = await upsertSessionContext(sessionId, ctx.user.id, mergedData);
 
-        // Étape 4: Générer une réponse appropriée
+        // Étape 6: Déterminer les informations manquantes
+        const missingFields = getMissingFields(updatedContext);
+
+        // Étape 7: Générer une réponse appropriée
         let responseMessage = "";
 
-        if (clientData) {
-          // Formater la date de naissance
+        if (clientData && !existingContext?.clientDataJson) {
+          // Premier message avec récupération CRM
           const birthDate = clientData.birth_date
             ? new Date(clientData.birth_date).toLocaleDateString("fr-FR")
             : "Non disponible";
@@ -149,61 +163,40 @@ Je vois que vous êtes déjà client chez nous. Je vais préparer votre devis d'
 - Date de naissance: ${birthDate}
 - Code postal: ${clientData.postal_code}
 - Statut professionnel: ${clientData.professional_category}
-- Email: ${clientData.email}
-
-**Informations de votre demande:**
-- Montant du prêt: ${extractedInfo.montant_pret ? extractedInfo.montant_pret + "€" : "Non spécifié"}
-- Date de signature: ${extractedInfo.date_signature || "25/11/2025"}
-- Type de bien: ${extractedInfo.type_bien || "Résidence principale"}`;
-
-          if (missingFields.length > 0) {
-            responseMessage += `\n\n**Informations complémentaires nécessaires pour générer votre devis:**\n`;
-            const fieldLabels: Record<string, string> = {
-              date_naissance: "Votre date de naissance",
-              code_postal: "Votre code postal",
-              statut_professionnel: "Votre statut professionnel",
-              montant_pret: "Le montant du prêt",
-              date_effet: "La date de prise d'effet souhaitée",
-              fumeur: "Êtes-vous fumeur ?",
-              encours_credits:
-                "Avez-vous un encours total de crédits supérieur à 200 000€ ?",
-              duree_pret: "Quelle est la durée souhaitée du prêt (en années) ?",
-              revenu_mensuel: "Quel est votre revenu mensuel net ?",
-            };
-            responseMessage += missingFields
-              .map((field) => `- ${fieldLabels[field] || field}`)
-              .join("\n");
-            responseMessage += `\n\nPouvez-vous me fournir ces informations ?`;
-          } else {
-            responseMessage += `\n\n✅ Toutes les informations nécessaires sont disponibles. Génération de votre devis en cours...`;
-          }
+- Email: ${clientData.email}`;
         } else {
-          responseMessage = `Bonjour ${extractedInfo.nom_complet || "client"} !
+          // Message de suivi
+          responseMessage = `Merci pour ces informations !
 
-Je comprends que vous souhaitez un devis pour une assurance de prêt immobilier.
+**Informations collectées:**
+${formatContextForDisplay(updatedContext)}`;
+        }
 
-**Informations reçues:**
-- Montant du prêt: ${extractedInfo.montant_pret ? extractedInfo.montant_pret + "€" : "Non spécifié"}
-- Date de signature: ${extractedInfo.date_signature || "25/11/2025"}
-- Type de bien: ${extractedInfo.type_bien || "Résidence principale"}
-
-**Informations nécessaires pour établir votre devis:**
-- Votre date de naissance
-- Votre code postal
-- Votre statut professionnel (salarié, cadre, libéral, etc.)
-- Êtes-vous fumeur ?
-- Avez-vous un encours total de crédits supérieur à 200 000€ ?
-- Quelle est la durée souhaitée du prêt (en années) ?
-- Quel est votre revenu mensuel net ?
-
-Pouvez-vous me fournir ces informations ?`;
+        if (missingFields.length > 0) {
+          responseMessage += `\n\n**Informations complémentaires nécessaires:**\n`;
+          const fieldLabels: Record<string, string> = {
+            nom_complet: "Votre nom complet",
+            date_naissance: "Votre date de naissance",
+            code_postal: "Votre code postal",
+            statut_professionnel: "Votre statut professionnel",
+            montant_pret: "Le montant du prêt",
+            date_effet: "La date de prise d'effet souhaitée",
+            fumeur: "Êtes-vous fumeur ?",
+            encours_credits: "Avez-vous un encours total de crédits supérieur à 200 000€ ?",
+            duree_pret: "Quelle est la durée souhaitée du prêt (en mois ou années) ?",
+            revenu_mensuel: "Quel est votre revenu mensuel net ?",
+          };
+          responseMessage += missingFields.map((field) => `- ${fieldLabels[field] || field}`).join("\n");
+          responseMessage += `\n\nPouvez-vous me fournir ces informations ?`;
+        } else {
+          responseMessage += `\n\n✅ **Toutes les informations nécessaires sont disponibles !**\n\nGénération de votre devis en cours...`;
+          // TODO: Appeler l'API Zenioo pour générer le devis
         }
 
         return {
           success: true,
           message: responseMessage,
-          extractedInfo,
-          clientData,
+          context: updatedContext,
           missingFields,
         };
       } catch (error: any) {

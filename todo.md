@@ -85,3 +85,11 @@
 - [x] Mettre à jour mcpHttp.ts pour utiliser les modules API directs
 - [ ] Tester le workflow complet du chat
 - [ ] Préparer la transformation future en serveur MCP
+
+
+## Gestion du contexte conversationnel
+- [x] Créer une table pour stocker le contexte des sessions de chat
+- [x] Modifier processMessage pour accumuler les informations au fil de la conversation
+- [x] Ne pas redemander les informations déjà fournies
+- [x] Afficher un résumé des informations collectées
+- [ ] Générer le devis quand toutes les informations sont disponibles
