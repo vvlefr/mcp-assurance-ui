@@ -1,30 +1,11 @@
 import { z } from "zod";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
-import axios from "axios";
+import { searchClientByName, getAllClients, getAllContracts, getAllQuotes } from "../api/crmApi";
 
 /**
- * Routeur pour le workflow du chat intelligent via le serveur HTTP MCP
+ * Routeur pour le workflow du chat intelligent avec intégration directe des API
  */
-
-const MCP_HTTP_URL = "http://localhost:8000";
-
-// Fonction pour interroger le CRM via le serveur HTTP MCP
-async function searchClientInCRM(name: string): Promise<any> {
-  try {
-    const response = await axios.post(`${MCP_HTTP_URL}/crm/clients/search`, {
-      name,
-    });
-    return response.data;
-  } catch (error: any) {
-    console.error("Erreur lors de la recherche client CRM:", error.message);
-    return {
-      success: false,
-      data: [],
-      error: error.message,
-    };
-  }
-}
 
 // Fonction pour extraire les informations du message avec un prompt simple
 async function extractInfoFromMessage(message: string): Promise<any> {
@@ -124,7 +105,7 @@ export const mcpHttpRouter = router({
         // Étape 2: Si le client dit être existant, interroger le CRM
         let clientData = null;
         if (extractedInfo.est_client_existant && extractedInfo.nom_complet) {
-          const crmResult = await searchClientInCRM(extractedInfo.nom_complet);
+          const crmResult = await searchClientByName(extractedInfo.nom_complet);
 
           if (crmResult.success && crmResult.data && crmResult.data.length > 0) {
             clientData = crmResult.data[0]; // Prendre le premier résultat
@@ -245,54 +226,27 @@ Pouvez-vous me fournir ces informations ?`;
       })
     )
     .query(async ({ input }) => {
-      return searchClientInCRM(input.name);
+      return searchClientByName(input.name);
     }),
 
   /**
    * Procédure pour récupérer tous les clients du CRM
    */
   getAllClients: protectedProcedure.query(async () => {
-    try {
-      const response = await axios.get(`${MCP_HTTP_URL}/crm/clients`);
-      return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message,
-        data: [],
-      };
-    }
+    return getAllClients();
   }),
 
   /**
    * Procédure pour récupérer les contrats du CRM
    */
   getContracts: protectedProcedure.query(async () => {
-    try {
-      const response = await axios.get(`${MCP_HTTP_URL}/crm/contracts`);
-      return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message,
-        data: [],
-      };
-    }
+    return getAllContracts();
   }),
 
   /**
    * Procédure pour récupérer les devis du CRM
    */
   getQuotes: protectedProcedure.query(async () => {
-    try {
-      const response = await axios.get(`${MCP_HTTP_URL}/crm/quotes`);
-      return response.data;
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message,
-        data: [],
-      };
-    }
+    return getAllQuotes();
   }),
 });

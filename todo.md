@@ -77,3 +77,11 @@
 - [x] Ajouter une gestion d'erreur robuste pour les réponses LLM
 - [x] Simplifier le prompt LLM sans response_format strict
 - [ ] Tester avec différents formats de réponse
+
+
+## Intégration directe des API dans Node.js
+- [x] Créer un module pour les appels API CRM Supabase
+- [x] Créer un module pour les appels API Zenioo
+- [x] Mettre à jour mcpHttp.ts pour utiliser les modules API directs
+- [ ] Tester le workflow complet du chat
+- [ ] Préparer la transformation future en serveur MCP
