@@ -93,3 +93,9 @@
 - [x] Ne pas redemander les informations déjà fournies
 - [x] Afficher un résumé des informations collectées
 - [ ] Générer le devis quand toutes les informations sont disponibles
+
+
+## Bug - Erreur d'insertion dans chat_contexts
+- [x] Corriger la gestion des sessions de chat
+- [x] Créer ou récupérer une session avant d'insérer le contexte
+- [x] Utiliser l'ID de session au lieu du timestamp

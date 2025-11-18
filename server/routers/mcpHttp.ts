@@ -4,6 +4,7 @@ import { invokeLLM } from "../_core/llm";
 import { searchClientByName, getAllClients, getAllContracts, getAllQuotes } from "../api/crmApi";
 import {
   getSessionContext,
+  getSessionIdFromUUID,
   upsertSessionContext,
   mergeContextData,
   getMissingFields,
@@ -104,14 +105,23 @@ export const mcpHttpRouter = router({
     .input(
       z.object({
         message: z.string(),
-        sessionId: z.number(),
+        sessionId: z.string(), // UUID de la session
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const { message, sessionId } = input;
+      const { message, sessionId: sessionUUID } = input;
 
       try {
-        // Étape 1: Récupérer le contexte existant
+        // Étape 1: Récupérer l'ID numérique de la session
+        const sessionId = await getSessionIdFromUUID(sessionUUID);
+        if (!sessionId) {
+          return {
+            success: false,
+            message: "Session introuvable. Veuillez créer une nouvelle session.",
+          };
+        }
+
+        // Étape 2: Récupérer le contexte existant
         const existingContext = await getSessionContext(sessionId);
 
         // Étape 2: Extraire les nouvelles informations du message

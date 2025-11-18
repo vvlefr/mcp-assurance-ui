@@ -82,7 +82,7 @@ export default function TestChat() {
       // Appeler le workflow intelligent MCP
       const mcpResponse = await processMCPMessageMutation.mutateAsync({
         message,
-        sessionId: parseInt(sessionId.split('-')[1]) || 0,
+        sessionId: sessionId, // Envoyer l'UUID directement
       });
 
       const assistantResponse = mcpResponse.success 

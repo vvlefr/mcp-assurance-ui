@@ -1,10 +1,26 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../db";
-import { chatContexts, ChatContext, InsertChatContext } from "../../drizzle/schema";
+import { chatContexts, chatSessions, ChatContext, InsertChatContext } from "../../drizzle/schema";
 
 /**
  * Module pour gérer le contexte conversationnel des sessions de chat
  */
+
+/**
+ * Récupérer l'ID numérique d'une session à partir de son UUID
+ */
+export async function getSessionIdFromUUID(sessionUUID: string): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const results = await db
+    .select()
+    .from(chatSessions)
+    .where(eq(chatSessions.sessionId, sessionUUID))
+    .limit(1);
+
+  return results.length > 0 ? results[0].id : null;
+}
 
 /**
  * Récupérer le contexte d'une session
