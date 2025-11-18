@@ -7,19 +7,37 @@ import { chatContexts, chatSessions, ChatContext, InsertChatContext } from "../.
  */
 
 /**
- * Récupérer l'ID numérique d'une session à partir de son UUID
+ * Récupérer ou créer l'ID numérique d'une session à partir de son UUID
  */
-export async function getSessionIdFromUUID(sessionUUID: string): Promise<number | null> {
+export async function getSessionIdFromUUID(sessionUUID: string, userId: number): Promise<number | null> {
   const db = await getDb();
   if (!db) return null;
 
+  // Vérifier si la session existe
   const results = await db
     .select()
     .from(chatSessions)
     .where(eq(chatSessions.sessionId, sessionUUID))
     .limit(1);
 
-  return results.length > 0 ? results[0].id : null;
+  if (results.length > 0) {
+    return results[0].id;
+  }
+
+  // Créer une nouvelle session si elle n'existe pas
+  const insertResult = await db.insert(chatSessions).values({
+    userId,
+    sessionId: sessionUUID,
+  });
+
+  // Récupérer l'ID de la session nouvellement créée
+  const newSession = await db
+    .select()
+    .from(chatSessions)
+    .where(eq(chatSessions.sessionId, sessionUUID))
+    .limit(1);
+
+  return newSession.length > 0 ? newSession[0].id : null;
 }
 
 /**

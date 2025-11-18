@@ -112,12 +112,12 @@ export const mcpHttpRouter = router({
       const { message, sessionId: sessionUUID } = input;
 
       try {
-        // Étape 1: Récupérer l'ID numérique de la session
-        const sessionId = await getSessionIdFromUUID(sessionUUID);
+        // Étape 1: Récupérer ou créer l'ID numérique de la session
+        const sessionId = await getSessionIdFromUUID(sessionUUID, ctx.user.id);
         if (!sessionId) {
           return {
             success: false,
-            message: "Session introuvable. Veuillez créer une nouvelle session.",
+            message: "Impossible de créer ou récupérer la session.",
           };
         }
 

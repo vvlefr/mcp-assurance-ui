@@ -99,3 +99,13 @@
 - [x] Corriger la gestion des sessions de chat
 - [x] Créer ou récupérer une session avant d'insérer le contexte
 - [x] Utiliser l'ID de session au lieu du timestamp
+- [x] Créer automatiquement la session si elle n'existe pas
+
+
+## Amélioration du système de questions
+- [x] Consulter la documentation Zenioo pour lister TOUS les champs requis
+- [ ] Ajouter les questions manquantes (taux prêt, type prêt, garanties, quotité, franchise, code produit)
+- [ ] Implémenter un système de fallback après appel API
+- [ ] Détecter les erreurs API et poser les questions manquantes
+- [ ] Proposer des valeurs par défaut intelligentes
+- [ ] Valider les données avant l'appel API
