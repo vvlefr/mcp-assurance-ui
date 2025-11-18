@@ -109,3 +109,14 @@
 - [ ] Détecter les erreurs API et poser les questions manquantes
 - [ ] Proposer des valeurs par défaut intelligentes
 - [ ] Valider les données avant l'appel API
+
+
+## Intégration Digital Insure (DI)
+- [x] Analyser la documentation PowerPoint et les exemples Postman
+- [x] Extraire les endpoints et champs requis pour l'assurance de prêt (ADE)
+- [x] Créer le module API digitalInsureApi.ts
+- [x] Implémenter l'authentification Digital Insure (OAuth2)
+- [x] Implémenter l'endpoint getTarifs pour l'assurance de prêt
+- [x] Implémenter les endpoints de création et complétion de dossier
+- [ ] Intégrer Digital Insure dans le workflow du chat
+- [ ] Tester les appels API avec les credentials fournis
