@@ -270,7 +270,7 @@ export async function getTarifs(
  * Créer un dossier
  */
 export async function createBusinessRecord(
-  externalBusinessRecordId: string,
+  externalRecordId: string,
   scenarioRecordDataModel: any
 ): Promise<any> {
   try {
@@ -278,7 +278,7 @@ export async function createBusinessRecord(
     const response = await client.post(
       `/rest/v2/ade/businessRecord/createBusinessRecord`,
       {
-        externalBusinessRecordId,
+        externalRecordId,
         scenarioRecordDataModel,
       }
     );
