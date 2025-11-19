@@ -21,6 +21,56 @@ import {
  */
 import { debugLog } from '../debug-logger';
 
+/**
+ * Construire un scénario pour la meilleure offre
+ */
+function buildScenarioForBestOffer(context: any, clientData: any, bestOffer: any): any {
+  const externalInsuredId = `INS_${Date.now()}`;
+  const externalLoanId = `LOAN_${Date.now()}`;
+  const externalBusinessRecordId = `BIZ_${Date.now()}`;
+
+  const insured = {
+    externalInsuredId,
+    lastName: clientData.last_name || context.nomComplet?.split(' ')[1] || '',
+    firstName: clientData.first_name || context.nomComplet?.split(' ')[0] || '',
+    birthdate: clientData.birth_date || context.dateNaissance || '',
+    email: clientData.email || context.email || '',
+    zipCode: clientData.zip_code || context.codePostal || '',
+    smoker: context.fumeur === true || context.fumeur === 'oui',
+    professionalCategory: mapProfessionalCategory(clientData.professional_status || context.statutProfessionnel),
+  };
+
+  const loan = {
+    externalLoanId,
+    amount: parseFloat(context.montantPret) || 0,
+    duration: parseInt(context.dureePret) || 0,
+    rate: parseFloat(context.tauxPret) || 2.5,
+    purposeOfFinancing: (
+      context.typeBien?.toLowerCase().includes("résidence principale") ||
+      context.typeBien?.toLowerCase().includes("appartement") ||
+      context.typeBien?.toLowerCase().includes("maison")
+    ) ? "RESI_PRINCIPALE" : 
+    context.typeBien?.toLowerCase().includes("investissement") ? "INVEST_LOCATIF" :
+    context.typeBien?.toLowerCase().includes("secondaire") ? "RESI_SECONDAIRE" :
+    context.typeBien?.toLowerCase().includes("professionnel") ? "PRO" :
+    "RESI_PRINCIPALE",
+    signingDate: convertDateToISO(context.dateSignature),
+  };
+
+  const quotite = parseInt(context.quotite) || 100;
+  
+  const scenario = {
+    externalBusinessRecordId,
+    insured,
+    loan,
+    productCode: bestOffer.productCode,
+    premiumType: bestOffer.premiumType || "CRD",
+    quotite,
+  };
+
+  return scenario;
+}
+
 async function compareInsuranceOffers(context: any, clientData: any): Promise<any> {
   try {
     debugLog('[Comparateur] Début de compareInsuranceOffers', { context, clientData });
@@ -113,7 +163,54 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
       : null;
 
     // Construire le message de réponse
-    let message = "\n\n🎯 **Comparateur Intelligent - Meilleures Offres**\n\n";
+    let message = "\n\n🎯 **Comparateur Intelligent - Meilleure Offre**\n\n";
+    
+    // Si toutes les offres viennent du même partenaire (Digital Insure uniquement),
+    // n'afficher que la meilleure offre (la moins chère)
+    const allFromSamePartner = allOffers.every(o => o.source === 'Digital Insure');
+    
+    if (allFromSamePartner) {
+      // N'afficher que la meilleure offre (la moins chère)
+      const bestOffer = bestCRD && bestFIXE 
+        ? (bestCRD.totalCost < bestFIXE.totalCost ? bestCRD : bestFIXE)
+        : (bestCRD || bestFIXE);
+      
+      if (bestOffer) {
+        message += "Nous avons sélectionné la meilleure offre pour vous :\n\n";
+        message += `**${bestOffer.productLabel || bestOffer.productCode}**\n`;
+        message += `- Cotisation mensuelle initiale : ${bestOffer.monthlyPremium.toFixed(2)}€\n`;
+        message += `- Coût total de l'assurance : ${bestOffer.totalCost.toFixed(2)}€\n`;
+        message += `- TAEA : ${bestOffer.taea.toFixed(2)}%\n\n`;
+        
+        // Sauvegarder automatiquement le devis dans l'extranet Digital Insure
+        try {
+          debugLog(`[Comparateur] Sauvegarde automatique du devis pour la meilleure offre`);
+          
+          const scenario = buildScenarioForBestOffer(context, clientData, bestOffer);
+          const saveResult = await digitalInsureApi.createBusinessRecord(scenario, scenario.externalBusinessRecordId);
+          
+          if (saveResult.compareRecordId) {
+            debugLog(`[Comparateur] Devis sauvegardé avec succès - ID: ${saveResult.compareRecordId}`);
+            message += `\n✅ **Votre devis a été sauvegardé dans notre système.**\n`;
+          } else {
+            debugLog(`[Comparateur] Erreur lors de la sauvegarde du devis:`, saveResult);
+          }
+        } catch (error: any) {
+          debugLog(`[Comparateur] Erreur lors de la sauvegarde du devis:`, error.message);
+          // Ne pas bloquer l'affichage des tarifs si la sauvegarde échoue
+        }
+        
+        return {
+          success: true,
+          message,
+          bestOffer,
+          allOffers,
+        };
+      }
+    }
+    
+    // Si les offres viennent de partenaires différents, afficher les 2 meilleures
+    message = "\n\n🎯 **Comparateur Intelligent - Meilleures Offres**\n\n";
     message += "Nous avons comparé toutes les offres disponibles et sélectionné les 2 meilleures pour vous :\n\n";
 
     // Si on a à la fois CRD et FIXE

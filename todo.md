@@ -247,3 +247,19 @@
 - [x] Corriger le champ signingDate qui causait l'erreur 500
 - [x] Tester le workflow complet - Les tarifs s'affichent correctement avec le TAEA corrigé
 - [ ] Réimplémenter la sauvegarde automatique maintenant que le bug est corrigé
+
+
+## Modification affichage des offres - Une seule offre si même partenaire
+- [x] Modifier compareInsuranceOffers pour détecter si toutes les offres viennent du même partenaire
+- [x] N'afficher qu'une seule offre (la moins chère) si toutes viennent de Digital Insure
+- [x] Afficher 2 offres si elles viennent de partenaires différents (Digital Insure vs Zenioo)
+- [x] Supprimer le message "Économie" quand une seule offre est affichée
+- [ ] Tester avec Guillaume Bidoux
+
+## Réactivation sauvegarde automatique
+- [x] Décommenter le code de sauvegarde automatique dans compareInsuranceOffers
+- [x] Vérifier que createBusinessRecord utilise le bon format de date (ISO)
+- [x] Corriger les erreurs TypeScript dans buildScenarioForBestOffer
+- [x] Simplifier les types pour éviter les erreurs de compilation
+- [ ] Tester la sauvegarde avec Guillaume Bidoux
+- [ ] Vérifier que le dossier apparaît dans l'extranet Digital Insure
