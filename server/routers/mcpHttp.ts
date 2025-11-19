@@ -64,9 +64,27 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
     }
 
     if (allOffers.length === 0) {
+      // Logger les erreurs détaillées pour le débogage
+      console.error("[Comparateur] Aucune offre disponible");
+      console.error("[Comparateur] Résultat CRD:", JSON.stringify(crdResult, null, 2));
+      console.error("[Comparateur] Résultat FIXE:", JSON.stringify(fixeResult, null, 2));
+      
+      // Extraire les erreurs des réponses API
+      let errorDetails = "";
+      if (crdResult.data?.tarificationResponseModels) {
+        crdResult.data.tarificationResponseModels.forEach((tarif: any) => {
+          if (tarif.responseStateModel?.businessState === "KO") {
+            const errors = tarif.responseStateModel?.businessResponse?.businessErrors || [];
+            errors.forEach((err: any) => {
+              errorDetails += `\n- ${err.controlLabel || err.errorCode}`;
+            });
+          }
+        });
+      }
+      
       return {
         success: false,
-        error: "Aucune offre disponible pour ce profil.",
+        error: "Aucune offre disponible pour ce profil." + (errorDetails ? "\n\nErreurs API:" + errorDetails : ""),
       };
     }
 
@@ -219,7 +237,7 @@ async function generateDigitalInsureQuote(context: any, clientData: any, premium
       amount: parseInt(context.montantPret) || 100000,
       duration: parseInt(context.dureePret) || 240,
       residualValue: 0,
-      rate: 2.5, // Taux par défaut
+      rate: parseFloat(context.tauxPret) || 2.5, // Utiliser le taux du contexte ou 2.5% par défaut
       rateType: "FIXE",
       deferredType: "AUCUN",
       deferredDuration: 0,
@@ -230,7 +248,8 @@ async function generateDigitalInsureQuote(context: any, clientData: any, premium
       signingDate: context.dateSignature || new Date().toISOString().split("T")[0],
     };
 
-    // Préparer les garanties (DC/PTIA + IPT + IPP + ITT avec quotité 100%)
+    // Préparer les garanties (DC/PTIA + IPT + IPP + ITT avec quotité du contexte)
+    const quotite = parseInt(context.quotite) || 100; // Utiliser la quotité du contexte ou 100% par défaut
     const requirement: digitalInsureApi.DIRequirement = {
       insuredId: externalInsuredId,
       loanId: externalLoanId,
@@ -239,23 +258,23 @@ async function generateDigitalInsureQuote(context: any, clientData: any, premium
         {
           code: "DCPTIA",
           type: "COVERAGE",
-          percentage: 100,
+          percentage: quotite,
         },
         {
           code: "IPT",
           type: "COVERAGE",
-          percentage: 100,
+          percentage: quotite,
         },
         {
           code: "IPP",
           type: "COVERAGE",
-          percentage: 100,
+          percentage: quotite,
         },
         {
           code: "ITT",
           type: "COVERAGE",
-          percentage: 100,
-          deductible: 90,
+          percentage: quotite,
+          deductible: 90, // Franchise par défaut
         },
       ],
     };
@@ -509,15 +528,17 @@ ${formatContextForDisplay(updatedContext)}`;
           responseMessage += `\n\n**Informations complémentaires nécessaires:**\n`;
           const fieldLabels: Record<string, string> = {
             nom_complet: "Votre nom complet",
-            date_naissance: "Votre date de naissance",
+            date_naissance: "Votre date de naissance (format JJ/MM/AAAA)",
+            email: "Votre adresse email",
             code_postal: "Votre code postal",
-            statut_professionnel: "Votre statut professionnel",
-            montant_pret: "Le montant du prêt",
-            date_effet: "La date de prise d'effet souhaitée",
-            fumeur: "Êtes-vous fumeur ?",
-            encours_credits: "Avez-vous un encours total de crédits supérieur à 200 000€ ?",
-            duree_pret: "Quelle est la durée souhaitée du prêt (en mois ou années) ?",
-            revenu_mensuel: "Quel est votre revenu mensuel net ?",
+            statut_professionnel: "Votre statut professionnel (salarié, cadre, libéral, etc.)",
+            montant_pret: "Le montant du prêt (en euros)",
+            duree_pret: "La durée du prêt (en années)",
+            taux_pret: "Le taux du prêt (ex: 2.5 pour 2,5%)",
+            date_signature: "La date de signature prévue chez le notaire (format JJ/MM/AAAA)",
+            type_bien: "Le type de bien (appartement, maison, résidence principale, secondaire, investissement locatif)",
+            nombre_emprunteurs: "Empruntez-vous seul ou à deux ? (répondez '1' pour seul, '2' pour à deux)",
+            fumeur: "Êtes-vous fumeur ? (oui/non)",
           };
           responseMessage += missingFields.map((field) => `- ${fieldLabels[field] || field}`).join("\n");
           responseMessage += `\n\nPouvez-vous me fournir ces informations ?`;

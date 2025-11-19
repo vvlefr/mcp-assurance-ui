@@ -163,3 +163,28 @@
 - [x] Intégrer les corrections dans le workflow du chat
 - [x] Corriger les noms des champs (primePeriodiqueDevis, primeGlobaleDevis, taeaDevis)
 - [ ] Tester le workflow complet avec un client réel
+
+
+## Correction du système de questions - Champs manquants
+- [x] Analyser les logs d'erreur API pour identifier les champs manquants
+- [x] Créer une liste complète des champs obligatoires (champs_obligatoires_digital_insure.md)
+- [x] Améliorer getMissingFields pour inclure tous les champs critiques
+- [x] Mettre à jour les labels des questions pour plus de clarté
+- [x] Améliorer l'affichage des erreurs API dans le chat pour le débogage
+- [x] Utiliser des valeurs par défaut pour les champs optionnels (taux 2.5%, quotité 100%, garanties complètes, franchise ITT 90j)
+- [ ] Tester le workflow complet avec Guillaume Bidoux
+
+
+## Amélioration des questions - Taux et Quotité
+- [x] Ajouter le champ taux_pret au schéma de base de données
+- [x] Ajouter le champ nombre_emprunteurs au schéma de base de données
+- [x] Ajouter le champ quotite au schéma de base de données
+- [x] Appliquer les migrations avec pnpm db:push
+- [x] Demander le taux du prêt dans les questions
+- [x] Demander "Empruntez-vous seul ou à deux ?" pour calculer la quotité
+- [x] Calculer automatiquement la quotité : seul = 100%, à deux = 50%
+- [x] Mettre à jour getMissingFields pour inclure taux_pret et nombre_emprunteurs
+- [x] Mettre à jour mergeContextData pour gérer les nouveaux champs
+- [x] Mettre à jour generateDigitalInsureQuote pour utiliser le taux réel et la quotité calculée
+- [x] Mettre à jour formatContextForDisplay pour afficher les nouveaux champs
+- [ ] Tester le workflow complet avec Guillaume Bidoux

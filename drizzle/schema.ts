@@ -95,11 +95,14 @@ export const chatContexts = mysqlTable("chat_contexts", {
   // Informations assurance
   typeAssurance: varchar("typeAssurance", { length: 50 }),
   montantPret: int("montantPret"),
+  dureePret: int("dureePret"), // en mois
+  tauxPret: varchar("tauxPret", { length: 10 }), // Taux du prêt (ex: "2.5" pour 2,5%)
   dateSignature: varchar("dateSignature", { length: 20 }),
   typeBien: varchar("typeBien", { length: 100 }),
   fumeur: int("fumeur"), // 0 = non, 1 = oui, null = non répondu
   encoursCredits: int("encoursCredits"), // 0 = non, 1 = oui, null = non répondu
-  dureePret: int("dureePret"), // en mois
+  nombreEmprunteurs: int("nombreEmprunteurs"), // 1 = seul, 2 = à deux
+  quotite: int("quotite"), // Quotité d'assurance (50 ou 100)
   revenuMensuel: int("revenuMensuel"),
   // Métadonnées
   clientDataJson: text("clientDataJson"), // Données complètes du CRM en JSON
