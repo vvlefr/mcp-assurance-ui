@@ -390,7 +390,7 @@ Extrais UNIQUEMENT les informations mentionnées dans ce message (ne répète pa
 - date_signature: Date (ou null)
 - type_bien: Type de bien (appartement, maison, résidence principale, secondaire, investissement locatif) (ou null)
 - nombre_emprunteurs: 1 si "seul"/"tout seul", 2 si "à deux"/"avec mon conjoint" (ou null)
-- est_client_existant: true si mentionne être client (true/false)
+- est_client_existant: true si mentionne "je suis [NOM]" ou "j'ai un contrat" ou "je suis déjà client" (true/false)
 - fumeur: true si fumeur, false si non-fumeur (ou null)
 - encours_credits: true/false/null
 - revenu_mensuel: Revenu en euros (ou null)
@@ -403,6 +403,9 @@ EXEMPLES:
 - "non fumeur" → fumeur: false
 - "appartement" → type_bien: "appartement"
 - "résidence principale" → type_bien: "résidence principale"
+- "je suis Guillaume Bidoux" → nom_complet: "Guillaume Bidoux", est_client_existant: true
+- "j'ai un contrat santé" → est_client_existant: true
+- "je suis déjà client" → est_client_existant: true
 
 Réponds UNIQUEMENT avec un objet JSON valide sur une seule ligne.`;
 

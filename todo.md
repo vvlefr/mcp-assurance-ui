@@ -223,3 +223,10 @@
 - [x] Valider que l'API retourne des tarifs (4 offres disponibles)
 - [x] Retirer IPTIQ de la liste des produits (compte non paramétré)
 - [ ] Tester le workflow complet dans le chat
+
+
+## Correction détection clients existants
+- [x] Vérifier pourquoi l'API CRM n'est pas appelée quand le client mentionne son nom
+- [x] Améliorer la détection de "je suis [NOM]" dans le prompt d'extraction LLM
+- [x] Ajouter des exemples concrets pour guider le LLM ("je suis Guillaume Bidoux" → est_client_existant: true)
+- [ ] Tester avec "Bonjour je suis Guillaume Bidoux"
