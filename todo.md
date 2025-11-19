@@ -214,3 +214,12 @@
 - [x] Améliorer la détection de la durée (25 ans, 20 ans, etc.) → duree_pret avec conversion automatique
 - [x] Ajouter des exemples concrets dans le prompt pour guider le LLM
 - [ ] Tester avec le scénario Guillaume Bidoux complet
+
+
+## Débogage erreur API Digital Insure
+- [x] Créer un script de test pour appeler l'API avec les données de Guillaume Bidoux
+- [x] Identifier l'erreur exacte retournée par l'API (noms de champs incorrects)
+- [x] Corriger les noms des champs dans compareInsuranceOffers (primePeriodiqueDevis, primeGlobaleDevis, taeaDevis)
+- [x] Valider que l'API retourne des tarifs (4 offres disponibles)
+- [x] Retirer IPTIQ de la liste des produits (compte non paramétré)
+- [ ] Tester le workflow complet dans le chat

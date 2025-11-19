@@ -37,9 +37,9 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
             productCode: tarif.productCode,
             productLabel: tarif.productLabel,
             premiumType: "CRD",
-            monthlyPremium: tarif.quoteRateResult.monthlyPremium,
-            totalCost: tarif.quoteRateResult.totalCost,
-            taea: tarif.quoteRateResult.taea,
+            monthlyPremium: tarif.quoteRateResult.primePeriodiqueDevis,
+            totalCost: tarif.quoteRateResult.primeGlobaleDevis,
+            taea: tarif.quoteRateResult.taeaDevis,
             rawData: tarif,
           });
         }
@@ -54,9 +54,9 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
             productCode: tarif.productCode,
             productLabel: tarif.productLabel,
             premiumType: "FIXE",
-            monthlyPremium: tarif.quoteRateResult.monthlyPremium,
-            totalCost: tarif.quoteRateResult.totalCost,
-            taea: tarif.quoteRateResult.taea,
+            monthlyPremium: tarif.quoteRateResult.primePeriodiqueDevis,
+            totalCost: tarif.quoteRateResult.primeGlobaleDevis,
+            taea: tarif.quoteRateResult.taeaDevis,
             rawData: tarif,
           });
         }
@@ -293,7 +293,7 @@ async function generateDigitalInsureQuote(context: any, clientData: any, premium
       tarificationOptions: {
         calculateMode: "DEFAULT",
       },
-      productCodes: ["MAESTRO", "AVENIRNAOASSUR", "IRIADE", "MNCAP", "IPTIQ"],
+      productCodes: ["MAESTRO", "AVENIRNAOASSUR", "IRIADE", "MNCAP"],
       insuranceType: "ADE",
       scenarioRecordDataModel: {
         contextType: "NEW",
@@ -303,8 +303,14 @@ async function generateDigitalInsureQuote(context: any, clientData: any, premium
       },
     };
 
+    // Logger la requête pour débogage
+    console.log("[Digital Insure] Requête de tarification:", JSON.stringify(tarificationRequest, null, 2));
+    
     // Appeler l'API Digital Insure
     const result = await digitalInsureApi.getTarifs(tarificationRequest);
+    
+    // Logger la réponse complète pour débogage
+    console.log("[Digital Insure] Réponse complète:", JSON.stringify(result, null, 2));
 
     if (result.success && result.data) {
       // Formater les tarifs pour l'affichage
