@@ -96,6 +96,7 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
             monthlyPremium: tarif.quoteRateResult.primePeriodiqueDevis,
             totalCost: tarif.quoteRateResult.primeGlobaleDevis,
             taea: tarif.quoteRateResult.taeaDevis,
+            source: "Digital Insure",
             rawData: tarif,
           });
         }
@@ -113,6 +114,7 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
             monthlyPremium: tarif.quoteRateResult.primePeriodiqueDevis,
             totalCost: tarif.quoteRateResult.primeGlobaleDevis,
             taea: tarif.quoteRateResult.taeaDevis,
+            source: "Digital Insure",
             rawData: tarif,
           });
         }

@@ -263,3 +263,19 @@
 - [x] Simplifier les types pour éviter les erreurs de compilation
 - [ ] Tester la sauvegarde avec Guillaume Bidoux
 - [ ] Vérifier que le dossier apparaît dans l'extranet Digital Insure
+
+
+## Bug - Affichage de 2 offres au lieu d'une seule
+- [ ] Diagnostiquer pourquoi la logique allFromSamePartner ne fonctionne pas
+- [ ] Vérifier que toutes les offres ont bien source: 'Digital Insure'
+- [ ] Corriger la condition pour n'afficher qu'une seule offre
+- [ ] Supprimer le message "Économie" quand une seule offre est affichée
+- [ ] Tester avec Guillaume Bidoux
+
+
+## Hébergement GitHub
+- [ ] Créer un dépôt GitHub pour le projet
+- [ ] Initialiser Git dans le projet
+- [ ] Créer un fichier .gitignore approprié
+- [ ] Pousser le code sur GitHub
+- [ ] Vérifier que le dépôt est accessible
