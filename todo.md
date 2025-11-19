@@ -248,3 +248,16 @@
 - [ ] Stocker le compareRecordId dans le contexte de la session pour finalisation ultérieure
 - [ ] Tester la sauvegarde automatique avec Guillaume Bidoux
 - [ ] Permettre au client de finaliser la souscription plus tard via pushToInsurer
+
+
+## Débogage erreur "Aucune offre disponible"
+- [ ] Vérifier les logs du serveur pour voir l'erreur API exacte
+- [ ] Vérifier que la date de signature est correctement formatée (25/11 → 2025-11-25)
+- [ ] Vérifier que tous les champs requis sont bien remplis
+- [ ] Tester avec le script test_digital_insure_guillaume.mjs pour isoler le problème
+
+
+## Correction sauvegarde extranet - Champ manquant
+- [x] Corriger le nom du champ : externalRecordId → externalBusinessRecordId dans digitalInsureApi.ts
+- [ ] Tester la sauvegarde avec Guillaume Bidoux
+- [ ] Vérifier que le dossier apparaît dans l'extranet Digital Insure
