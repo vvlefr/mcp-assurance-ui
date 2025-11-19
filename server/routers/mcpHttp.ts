@@ -379,13 +379,24 @@ Extrais UNIQUEMENT les informations mentionnées dans ce message (ne répète pa
 - nom_complet: Nom complet (ou null)
 - type_assurance: Type d'assurance demandé (auto, habitation, pret, sante, etc.)
 - montant_pret: Montant en euros (ou null)
+- duree_pret: Durée en MOIS (convertir les années en mois : 25 ans = 300 mois) (ou null)
+- taux_pret: Taux du prêt en pourcentage (ex: "4" pour 4%, "2.5" pour 2,5%) (ou null)
 - date_signature: Date (ou null)
-- type_bien: Type de bien (ou null)
+- type_bien: Type de bien (appartement, maison, résidence principale, secondaire, investissement locatif) (ou null)
+- nombre_emprunteurs: 1 si "seul"/"tout seul", 2 si "à deux"/"avec mon conjoint" (ou null)
 - est_client_existant: true si mentionne être client (true/false)
-- fumeur: true/false/null
+- fumeur: true si fumeur, false si non-fumeur (ou null)
 - encours_credits: true/false/null
-- duree_pret: Durée en mois (ou null)
 - revenu_mensuel: Revenu en euros (ou null)
+
+EXEMPLES:
+- "25 ans" → duree_pret: 300
+- "4%" ou "4" → taux_pret: "4"
+- "tout seul" ou "seul" → nombre_emprunteurs: 1
+- "à deux" → nombre_emprunteurs: 2
+- "non fumeur" → fumeur: false
+- "appartement" → type_bien: "appartement"
+- "résidence principale" → type_bien: "résidence principale"
 
 Réponds UNIQUEMENT avec un objet JSON valide sur une seule ligne.`;
 

@@ -204,3 +204,13 @@
 - [x] Mettre à jour generateDigitalInsureQuote pour utiliser les garanties adaptées
 - [ ] Améliorer l'extraction LLM pour détecter le choix des garanties optionnelles
 - [ ] Tester le workflow complet avec un investissement locatif
+
+
+## Amélioration de l'extraction LLM
+- [x] Analyser le prompt d'extraction actuel
+- [x] Améliorer la détection de "tout seul" / "seul" → nombre_emprunteurs = 1
+- [x] Améliorer la détection de "à deux" / "avec mon conjoint" → nombre_emprunteurs = 2
+- [x] Améliorer la détection du taux (4%, 4, 2.5%, etc.) → taux_pret
+- [x] Améliorer la détection de la durée (25 ans, 20 ans, etc.) → duree_pret avec conversion automatique
+- [x] Ajouter des exemples concrets dans le prompt pour guider le LLM
+- [ ] Tester avec le scénario Guillaume Bidoux complet
