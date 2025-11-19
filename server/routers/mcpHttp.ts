@@ -19,13 +19,19 @@ import {
 /**
  * Comparateur intelligent : récupère les tarifs CRD et FIXE et sélectionne les 2 meilleures offres
  */
+import { debugLog } from '../debug-logger';
+
 async function compareInsuranceOffers(context: any, clientData: any): Promise<any> {
   try {
+    debugLog('[Comparateur] Début de compareInsuranceOffers', { context, clientData });
+    
     // Appeler Digital Insure avec les deux types de cotisation
+    console.log('[Comparateur] Appel de generateDigitalInsureQuote en parallèle (CRD et FIXE)...');
     const [crdResult, fixeResult] = await Promise.all([
       generateDigitalInsureQuote(context, clientData, "CRD"),
       generateDigitalInsureQuote(context, clientData, "FIXE"),
     ]);
+    console.log('[Comparateur] Résultats reçus - CRD:', crdResult.success, 'FIXE:', fixeResult.success);
 
     const allOffers: any[] = [];
 
@@ -175,10 +181,39 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
 }
 
 /**
+ * Convertir une date du format DD/MM ou DD/MM/YYYY vers YYYY-MM-DD
+ */
+function convertDateToISO(dateStr: string | undefined): string {
+  if (!dateStr) {
+    // Par défaut, date actuelle
+    return new Date().toISOString().split("T")[0];
+  }
+  
+  // Si déjà au format ISO (YYYY-MM-DD), retourner tel quel
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  
+  // Si format DD/MM ou DD/MM/YYYY
+  const parts = dateStr.split("/");
+  if (parts.length >= 2) {
+    const day = parts[0].padStart(2, "0");
+    const month = parts[1].padStart(2, "0");
+    const year = parts.length === 3 ? parts[2] : new Date().getFullYear().toString();
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Par défaut, date actuelle
+  return new Date().toISOString().split("T")[0];
+}
+
+/**
  * Générer un devis via Digital Insure
  */
 async function generateDigitalInsureQuote(context: any, clientData: any, premiumType: "CRD" | "FIXE" = "CRD"): Promise<any> {
   try {
+    debugLog(`[generateDigitalInsureQuote] Début avec premiumType: ${premiumType}`);
+    
     // Mapper les données du contexte vers le format Digital Insure
     const externalInsuredId = `INS_${Date.now()}`;
     const externalLoanId = `LOAN_${Date.now()}`;
@@ -244,8 +279,17 @@ async function generateDigitalInsureQuote(context: any, clientData: any, premium
       effectiveDate: effectiveDateStr,
       periodicityInsurance: "MENSUELLE",
       periodicityRefund: "MENSUELLE",
-      purposeOfFinancing: context.typeBien?.toLowerCase().includes("appartement") || context.typeBien?.toLowerCase().includes("maison") ? "RESI_PRINCIPALE" : "CREDIT_CONSO",
-      signingDate: context.dateSignature || new Date().toISOString().split("T")[0],
+      purposeOfFinancing: (
+        context.typeBien?.toLowerCase().includes("résidence principale") ||
+        context.typeBien?.toLowerCase().includes("residence principale") ||
+        context.typeBien?.toLowerCase().includes("appartement") ||
+        context.typeBien?.toLowerCase().includes("maison")
+      ) ? "RESI_PRINCIPALE" : 
+      context.typeBien?.toLowerCase().includes("investissement") ? "INVEST_LOCATIF" :
+      context.typeBien?.toLowerCase().includes("secondaire") ? "RESI_SECONDAIRE" :
+      context.typeBien?.toLowerCase().includes("professionnel") ? "PRO" :
+      "RESI_PRINCIPALE", // Par défaut
+      signingDate: convertDateToISO(context.dateSignature),
     };
 
     // Préparer les garanties adaptées au type de bien
@@ -304,13 +348,13 @@ async function generateDigitalInsureQuote(context: any, clientData: any, premium
     };
 
     // Logger la requête pour débogage
-    console.log("[Digital Insure] Requête de tarification:", JSON.stringify(tarificationRequest, null, 2));
+    debugLog("[Digital Insure] Requête de tarification", tarificationRequest);
     
     // Appeler l'API Digital Insure
     const result = await digitalInsureApi.getTarifs(tarificationRequest);
     
     // Logger la réponse complète pour débogage
-    console.log("[Digital Insure] Réponse complète:", JSON.stringify(result, null, 2));
+    debugLog("[Digital Insure] Réponse complète", result);
 
     if (result.success && result.data) {
       // Formater les tarifs pour l'affichage

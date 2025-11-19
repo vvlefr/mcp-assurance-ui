@@ -5,6 +5,8 @@ import axios, { AxiosInstance } from "axios";
  * Documentation: https://catwww.accelerassur.fr
  */
 
+import { debugLog } from '../debug-logger';
+
 const DI_BASE_URL = "https://catwww.accelerassur.fr/accelerassur-webservice/ws";
 const DI_API_LOGIN = "DISTRIB.TITANASSURANCESRECETTE_EVI_API";
 const DI_API_PASSWORD = "c07eb9629b514fb6bfc8ac9b64df2ece";
@@ -29,19 +31,28 @@ async function getAuthenticatedClient(): Promise<AxiosInstance> {
   }
 
   // Obtenir un nouveau token
-  const tokenResponse = await axios.get(
-    `${DI_BASE_URL}/security/oauth2/token`,
-    {
-      auth: {
-        username: DI_API_LOGIN,
-        password: DI_API_PASSWORD,
-      },
-    }
-  );
+  console.log('[Digital Insure] Demande d\'un nouveau token avec login:', DI_API_LOGIN);
+  
+  try {
+    const tokenResponse = await axios.get(
+      `${DI_BASE_URL}/security/oauth2/token`,
+      {
+        auth: {
+          username: DI_API_LOGIN,
+          password: DI_API_PASSWORD,
+        },
+      }
+    );
 
-  cachedToken = tokenResponse.data.access_token;
-  // Le token expire généralement après 1 heure, on le cache pour 55 minutes
-  tokenExpiry = Date.now() + 55 * 60 * 1000;
+    cachedToken = tokenResponse.data.access_token;
+    // Le token expire généralement après 1 heure, on le cache pour 55 minutes
+    tokenExpiry = Date.now() + 55 * 60 * 1000;
+    
+    console.log('[Digital Insure] Token obtenu avec succès, expire dans 55 minutes');
+  } catch (error: any) {
+    console.error('[Digital Insure] Erreur lors de l\'obtention du token:', error.response?.data || error.message);
+    throw error;
+  }
 
   return axios.create({
     baseURL: DI_BASE_URL,
@@ -245,19 +256,33 @@ export async function getTarifs(
   request: DITarificationRequest
 ): Promise<any> {
   try {
+    console.log('[Digital Insure] getTarifs appelé avec request:', JSON.stringify(request, null, 2));
     const client = await getAuthenticatedClient();
+    console.log('[Digital Insure] Client authentifié obtenu, envoi de la requête...');
     const response = await client.post(
       `/rest/v2/ade/tarification/getTarifs`,
       request
     );
+    console.log('[Digital Insure] Réponse reçue:', response.status, 'tarifs:', response.data?.tarifs?.length || 0);
     return {
       success: true,
       data: response.data,
     };
   } catch (error: any) {
+    const errorDetails = {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+      }
+    };
+    debugLog("[Digital Insure] Erreur lors de la tarification", errorDetails);
     console.error(
       "[Digital Insure] Erreur lors de la tarification:",
-      error.response?.data || error.message
+      JSON.stringify(errorDetails, null, 2)
     );
     return {
       success: false,

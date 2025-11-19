@@ -237,3 +237,13 @@
 - [x] Corriger l'affichage du TAEA en supprimant la multiplication par 100
 - [x] Le TAEA correct est maintenant 0.83% au lieu de 82.86%
 - [ ] Tester avec les données réelles de Guillaume Bidoux
+
+
+## Débogage erreur 500 - Format de date invalide
+- [x] Identifier l'erreur 500 retournée par l'API Digital Insure
+- [x] Comparer les données envoyées par le chat vs le script de test qui fonctionne
+- [x] Identifier le problème : format de signingDate ("25/11" au lieu de "2025-11-25")
+- [x] Créer une fonction convertDateToISO pour convertir DD/MM ou DD/MM/YYYY vers YYYY-MM-DD
+- [x] Corriger le champ signingDate qui causait l'erreur 500
+- [x] Tester le workflow complet - Les tarifs s'affichent correctement avec le TAEA corrigé
+- [ ] Réimplémenter la sauvegarde automatique maintenant que le bug est corrigé
