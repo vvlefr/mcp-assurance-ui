@@ -128,3 +128,38 @@
 - [x] Appeler getTarifs une fois toutes les informations collectées
 - [x] Afficher les tarifs des différents assureurs
 - [x] Gérer les erreurs API et demander les champs manquants
+
+
+## Test Authentification Digital Insure
+- [ ] Tester l'authentification OAuth2 avec les credentials fournis
+- [ ] Vérifier que l'API getTarifs retourne des données valides
+- [ ] Gérer les erreurs d'authentification et de timeout
+
+## Sélection et Souscription Automatique
+- [ ] Implémenter createBusinessRecord pour créer un dossier
+- [ ] Implémenter chooseInsurerProduct pour sélectionner une offre
+- [ ] Implémenter completeBusinessRecord pour compléter le dossier
+- [ ] Implémenter pushToInsurer pour finaliser la souscription
+- [ ] Ajouter la gestion des étapes de souscription dans le chat
+
+## Comparateur Intelligent (Cotisation Constante vs CRD)
+- [x] Créer la fonction compareInsuranceOffers qui appelle getTarifs avec CRD et FIXE
+- [x] Collecter toutes les offres CRD et FIXE
+- [x] Sélectionner automatiquement la meilleure offre de chaque type (coût total le plus bas)
+- [x] Gérer le cas où seules les offres CRD sont disponibles (proposer les 2 meilleures CRD)
+- [x] Afficher les 2 meilleures offres dans le chat avec détails (cotisation, coût total, TAEA)
+- [x] Tester le comparateur avec un script de test automatique
+- [ ] Intégrer Zenioo dans le comparateur pour comparer avec Digital Insure
+- [ ] Permettre au client de choisir entre les 2 options
+- [ ] Lancer la souscription automatique après le choix du client
+
+
+## Correction des champs de validation Digital Insure
+- [x] Corriger professionalCategory : NON_CADRE_SAL → NON_CADRE_SAL_EMPLOYE
+- [x] Corriger purposeOfFinancing : ACHAT_RP → RESI_PRINCIPALE
+- [x] Corriger effectiveDate : Date dans le futur (3 mois par défaut)
+- [x] Tester l'appel getTarifs avec toutes les corrections
+- [x] Documenter les mappings validés dans digital_insure_mappings.md
+- [x] Intégrer les corrections dans le workflow du chat
+- [x] Corriger les noms des champs (primePeriodiqueDevis, primeGlobaleDevis, taeaDevis)
+- [ ] Tester le workflow complet avec un client réel

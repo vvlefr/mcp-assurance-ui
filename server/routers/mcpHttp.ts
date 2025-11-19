@@ -17,9 +17,149 @@ import {
  */
 
 /**
+ * Comparateur intelligent : récupère les tarifs CRD et FIXE et sélectionne les 2 meilleures offres
+ */
+async function compareInsuranceOffers(context: any, clientData: any): Promise<any> {
+  try {
+    // Appeler Digital Insure avec les deux types de cotisation
+    const [crdResult, fixeResult] = await Promise.all([
+      generateDigitalInsureQuote(context, clientData, "CRD"),
+      generateDigitalInsureQuote(context, clientData, "FIXE"),
+    ]);
+
+    const allOffers: any[] = [];
+
+    // Collecter toutes les offres CRD
+    if (crdResult.success && crdResult.data?.tarificationResponseModels) {
+      crdResult.data.tarificationResponseModels.forEach((tarif: any) => {
+        if (tarif.responseStateModel?.businessState === "OK" && tarif.quoteRateResult) {
+          allOffers.push({
+            productCode: tarif.productCode,
+            productLabel: tarif.productLabel,
+            premiumType: "CRD",
+            monthlyPremium: tarif.quoteRateResult.monthlyPremium,
+            totalCost: tarif.quoteRateResult.totalCost,
+            taea: tarif.quoteRateResult.taea,
+            rawData: tarif,
+          });
+        }
+      });
+    }
+
+    // Collecter toutes les offres FIXE
+    if (fixeResult.success && fixeResult.data?.tarificationResponseModels) {
+      fixeResult.data.tarificationResponseModels.forEach((tarif: any) => {
+        if (tarif.responseStateModel?.businessState === "OK" && tarif.quoteRateResult) {
+          allOffers.push({
+            productCode: tarif.productCode,
+            productLabel: tarif.productLabel,
+            premiumType: "FIXE",
+            monthlyPremium: tarif.quoteRateResult.monthlyPremium,
+            totalCost: tarif.quoteRateResult.totalCost,
+            taea: tarif.quoteRateResult.taea,
+            rawData: tarif,
+          });
+        }
+      });
+    }
+
+    if (allOffers.length === 0) {
+      return {
+        success: false,
+        error: "Aucune offre disponible pour ce profil.",
+      };
+    }
+
+    // Séparer les offres par type
+    const crdOffers = allOffers.filter((o) => o.premiumType === "CRD");
+    const fixeOffers = allOffers.filter((o) => o.premiumType === "FIXE");
+
+    // Trouver la meilleure offre CRD (coût total le plus bas)
+    const bestCRD = crdOffers.length > 0
+      ? crdOffers.reduce((best, current) =>
+          current.totalCost < best.totalCost ? current : best
+        )
+      : null;
+
+    // Trouver la meilleure offre FIXE (coût total le plus bas)
+    const bestFIXE = fixeOffers.length > 0
+      ? fixeOffers.reduce((best, current) =>
+          current.totalCost < best.totalCost ? current : best
+        )
+      : null;
+
+    // Construire le message de réponse
+    let message = "\n\n🎯 **Comparateur Intelligent - Meilleures Offres**\n\n";
+    message += "Nous avons comparé toutes les offres disponibles et sélectionné les 2 meilleures pour vous :\n\n";
+
+    // Si on a à la fois CRD et FIXE
+    if (bestCRD && bestFIXE) {
+      message += `**Option 1 : Cotisation Dégressive (CRD)** - ${bestCRD.productLabel || bestCRD.productCode}\n`;
+      message += `- Cotisation mensuelle initiale : ${bestCRD.monthlyPremium.toFixed(2)}€\n`;
+      message += `- Coût total de l'assurance : ${bestCRD.totalCost.toFixed(2)}€\n`;
+      message += `- TAEA : ${(bestCRD.taea * 100).toFixed(2)}%\n`;
+      message += `- Type : La cotisation diminue au fil du temps avec le capital restant dû\n\n`;
+
+      message += `**Option 2 : Cotisation Constante (FIXE)** - ${bestFIXE.productLabel || bestFIXE.productCode}\n`;
+      message += `- Cotisation mensuelle : ${bestFIXE.monthlyPremium.toFixed(2)}€\n`;
+      message += `- Coût total de l'assurance : ${bestFIXE.totalCost.toFixed(2)}€\n`;
+      message += `- TAEA : ${(bestFIXE.taea * 100).toFixed(2)}%\n`;
+      message += `- Type : La cotisation reste identique pendant toute la durée du prêt\n\n`;
+
+      message += "\n💡 **Quelle option préférez-vous ?**\n";
+      message += "- Option 1 (CRD) : Idéale si vous souhaitez réduire vos mensualités au fil du temps\n";
+      message += "- Option 2 (FIXE) : Idéale pour une meilleure visibilité budgétaire\n";
+    }
+    // Si on a seulement des offres CRD, proposer les 2 meilleures
+    else if (crdOffers.length >= 2) {
+      const secondBestCRD = crdOffers
+        .filter(o => o.productCode !== bestCRD.productCode)
+        .reduce((best, current) =>
+          current.totalCost < best.totalCost ? current : best
+        );
+
+      message += `**Option 1 : ${bestCRD.productLabel || bestCRD.productCode}**\n`;
+      message += `- Cotisation mensuelle initiale : ${bestCRD.monthlyPremium.toFixed(2)}€\n`;
+      message += `- Coût total de l'assurance : ${bestCRD.totalCost.toFixed(2)}€\n`;
+      message += `- TAEA : ${(bestCRD.taea * 100).toFixed(2)}%\n\n`;
+
+      message += `**Option 2 : ${secondBestCRD.productLabel || secondBestCRD.productCode}**\n`;
+      message += `- Cotisation mensuelle initiale : ${secondBestCRD.monthlyPremium.toFixed(2)}€\n`;
+      message += `- Coût total de l'assurance : ${secondBestCRD.totalCost.toFixed(2)}€\n`;
+      message += `- TAEA : ${(secondBestCRD.taea * 100).toFixed(2)}%\n\n`;
+
+      const savings = secondBestCRD.totalCost - bestCRD.totalCost;
+      message += `\n💰 **Économie avec l'Option 1 : ${savings.toFixed(2)}€ sur toute la durée du prêt**\n`;
+      message += "\n💡 **Quelle option préférez-vous ?**\n";
+    }
+    // Si on a seulement 1 offre CRD
+    else if (bestCRD) {
+      message += `**Offre disponible : ${bestCRD.productLabel || bestCRD.productCode}**\n`;
+      message += `- Cotisation mensuelle initiale : ${bestCRD.monthlyPremium.toFixed(2)}€\n`;
+      message += `- Coût total de l'assurance : ${bestCRD.totalCost.toFixed(2)}€\n`;
+      message += `- TAEA : ${(bestCRD.taea * 100).toFixed(2)}%\n\n`;
+    }
+
+    return {
+      success: true,
+      message,
+      bestCRD,
+      bestFIXE,
+      allOffers,
+    };
+  } catch (error: any) {
+    console.error("[Comparateur] Erreur lors de la comparaison:", error);
+    return {
+      success: false,
+      error: error.message || "Erreur inconnue",
+    };
+  }
+}
+
+/**
  * Générer un devis via Digital Insure
  */
-async function generateDigitalInsureQuote(context: any, clientData: any): Promise<any> {
+async function generateDigitalInsureQuote(context: any, clientData: any, premiumType: "CRD" | "FIXE" = "CRD"): Promise<any> {
   try {
     // Mapper les données du contexte vers le format Digital Insure
     const externalInsuredId = `INS_${Date.now()}`;
@@ -86,7 +226,7 @@ async function generateDigitalInsureQuote(context: any, clientData: any): Promis
       effectiveDate: effectiveDateStr,
       periodicityInsurance: "MENSUELLE",
       periodicityRefund: "MENSUELLE",
-      purposeOfFinancing: context.typeBien?.toLowerCase().includes("appartement") || context.typeBien?.toLowerCase().includes("maison") ? "ACHAT_RP" : "CREDIT_CONSO",
+      purposeOfFinancing: context.typeBien?.toLowerCase().includes("appartement") || context.typeBien?.toLowerCase().includes("maison") ? "RESI_PRINCIPALE" : "CREDIT_CONSO",
       signingDate: context.dateSignature || new Date().toISOString().split("T")[0],
     };
 
@@ -94,7 +234,7 @@ async function generateDigitalInsureQuote(context: any, clientData: any): Promis
     const requirement: digitalInsureApi.DIRequirement = {
       insuredId: externalInsuredId,
       loanId: externalLoanId,
-      premiumType: "CRD",
+      premiumType,  // Utiliser le paramètre passé
       coverages: [
         {
           code: "DCPTIA",
@@ -141,7 +281,7 @@ async function generateDigitalInsureQuote(context: any, clientData: any): Promis
 
     if (result.success && result.data) {
       // Formater les tarifs pour l'affichage
-      const tarifs = result.data.tarifs || [];
+      const tarifs = result.data.tarificationResponseModels || [];
       if (tarifs.length === 0) {
         return {
           success: false,
@@ -151,10 +291,12 @@ async function generateDigitalInsureQuote(context: any, clientData: any): Promis
 
       let message = "";
       tarifs.forEach((tarif: any, index: number) => {
-        message += `\n\n**Offre ${index + 1}: ${tarif.productName || "Produit"}**\n`;
-        message += `- Cotisation mensuelle: ${tarif.monthlyPremium || "N/A"}€\n`;
-        message += `- Coût total: ${tarif.totalCost || "N/A"}€\n`;
-        message += `- TAEA: ${tarif.taea || "N/A"}%\n`;
+        if (tarif.responseStateModel?.businessState === "OK" && tarif.quoteRateResult) {
+          message += `\n\n**Offre ${index + 1}: ${tarif.productLabel || tarif.productCode}**\n`;
+          message += `- Cotisation mensuelle: ${tarif.quoteRateResult.primePeriodiqueDevis.toFixed(2)}€\n`;
+          message += `- Coût total: ${tarif.quoteRateResult.primeGlobaleDevis.toFixed(2)}€\n`;
+          message += `- TAEA: ${(tarif.quoteRateResult.taeaDevis * 100).toFixed(2)}%\n`;
+        }
       });
 
       return {
@@ -186,7 +328,7 @@ function mapProfessionalCategory(status: string | undefined): string {
   const statusUpper = status.toUpperCase();
   
   if (statusUpper.includes("CADRE")) return "CADRE_SAL";
-  if (statusUpper.includes("SALARIE") || statusUpper.includes("EMPLOYE")) return "NON_CADRE_SAL";
+  if (statusUpper.includes("SALARIE") || statusUpper.includes("EMPLOYE")) return "NON_CADRE_SAL_EMPLOYE";
   if (statusUpper.includes("LIBERAL") || statusUpper.includes("PROFESSION LIBERALE")) return "PROFESSION_LIBERALE";
   if (statusUpper.includes("COMMERCANT") || statusUpper.includes("ARTISAN")) return "COMMERCANT_ARTISAN";
   if (statusUpper.includes("FONCTIONNAIRE")) return "FONCTIONNAIRE";
@@ -383,8 +525,8 @@ ${formatContextForDisplay(updatedContext)}`;
           // Toutes les informations sont disponibles, générer le devis
           responseMessage += `\n\n✅ **Toutes les informations nécessaires sont disponibles !**\n\nGénération de votre devis en cours...`;
           
-          // Appeler Digital Insure pour obtenir les tarifs
-          const diResult = await generateDigitalInsureQuote(updatedContext, clientData);
+          // Appeler le comparateur intelligent
+          const diResult = await compareInsuranceOffers(updatedContext, clientData);
           
           if (diResult.success) {
             responseMessage += `\n\n**Tarifs disponibles:**\n${diResult.message}`;
