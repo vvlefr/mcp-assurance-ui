@@ -237,3 +237,14 @@
 - [x] Corriger l'affichage du TAEA en supprimant la multiplication par 100
 - [x] Le TAEA correct est maintenant 0.83% au lieu de 82.86%
 - [ ] Tester avec les données réelles de Guillaume Bidoux
+
+
+## Sauvegarde automatique des devis
+- [x] Créer la fonction buildScenarioForBestOffer pour construire le dossier
+- [x] Appeler createBusinessRecord automatiquement après la génération des offres
+- [x] Sauvegarder la meilleure offre (la moins chère) dans Digital Insure
+- [x] Afficher un message de confirmation au client avec la référence du devis
+- [x] Gérer les erreurs de sauvegarde sans bloquer l'affichage des tarifs
+- [ ] Stocker le compareRecordId dans le contexte de la session pour finalisation ultérieure
+- [ ] Tester la sauvegarde automatique avec Guillaume Bidoux
+- [ ] Permettre au client de finaliser la souscription plus tard via pushToInsurer

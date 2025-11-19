@@ -158,12 +158,39 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
       message += `- TAEA : ${bestCRD.taea.toFixed(2)}%\n\n`;
     }
 
+    // Sauvegarder automatiquement la meilleure offre dans Digital Insure
+    let compareRecordId = null;
+    const bestOffer = bestCRD; // La meilleure offre (la moins chère)
+    
+    if (bestOffer) {
+      try {
+        // Créer le dossier dans Digital Insure avec la meilleure offre
+        const externalRecordId = `RECORD_${Date.now()}`;
+        const scenarioRecordDataModel = await buildScenarioForBestOffer(context, clientData, bestOffer);
+        
+        const createResult = await digitalInsureApi.createBusinessRecord(
+          externalRecordId,
+          scenarioRecordDataModel
+        );
+        
+        if (createResult.success && createResult.data?.compareRecordId) {
+          compareRecordId = createResult.data.compareRecordId;
+          console.log(`[Comparateur] Devis sauvegardé avec succès: ${compareRecordId}`);
+          message += `\n\n✅ **Votre devis a été enregistré** (Référence: ${compareRecordId.substring(0, 8)})`;
+        }
+      } catch (saveError: any) {
+        console.error("[Comparateur] Erreur lors de la sauvegarde du devis:", saveError);
+        // Ne pas bloquer l'affichage des tarifs si la sauvegarde échoue
+      }
+    }
+
     return {
       success: true,
       message,
       bestCRD,
       bestFIXE,
       allOffers,
+      compareRecordId,
     };
   } catch (error: any) {
     console.error("[Comparateur] Erreur lors de la comparaison:", error);
@@ -172,6 +199,116 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
       error: error.message || "Erreur inconnue",
     };
   }
+}
+
+/**
+ * Construire le scénario pour la meilleure offre (pour createBusinessRecord)
+ */
+async function buildScenarioForBestOffer(context: any, clientData: any, bestOffer: any): Promise<any> {
+  // Mapper les données du contexte vers le format Digital Insure
+  const externalInsuredId = `INS_${Date.now()}`;
+  const externalLoanId = `LOAN_${Date.now()}`;
+
+  // Préparer les données de l'assuré
+  const insured: digitalInsureApi.DIInsured = {
+    externalInsuredId,
+    numOrder: 1,
+    personDataModel: {
+      gender: clientData?.civility === "MME" ? "MME" : "MR",
+      firstname: clientData?.first_name || context.nomComplet?.split(" ")[0] || "Prénom",
+      lastname: clientData?.last_name || context.nomComplet?.split(" ").slice(1).join(" ") || "Nom",
+      dateOfBirth: context.dateNaissance || clientData?.birth_date || "1980-01-01",
+      email: context.email || clientData?.email || "contact@example.com",
+      mobilePhoneNumber: context.telephone || clientData?.phone || "0600000000",
+    },
+    address: {
+      adrAddressLine1: clientData?.address || "1 rue de la Paix",
+      adrAddressLine2: "",
+      adrZipcode: context.codePostal || clientData?.postal_code || "75001",
+      adrCity: clientData?.city || "Paris",
+      adrCountry: "FRANCE",
+    },
+    countryOfResidence: "FRANCE",
+    cityOfBirth: clientData?.city || "Paris",
+    professionalCategory: mapProfessionalCategory(context.statutProfessionnel || clientData?.professional_category),
+    smoker: context.fumeur === true,
+    esmoker: false,
+    esmokerNoNicotine: false,
+    annualMilage: "0",
+    workAtHeight: "0",
+    manualWork: false,
+    exactJob: context.statutProfessionnel || clientData?.professional_category || "Employé",
+    socialRegime: "SALARIE",
+    manualWorkRisk: false,
+    workRisk: false,
+    dangerousProduct: false,
+    outStandings: context.encoursCredits ? [
+      {
+        context: "ASSURE_LEMOINE",
+        value: "DC_IMMO_SUP_200K",
+      },
+    ] : [],
+  };
+
+  // Calculer la date d'effet (3 mois dans le futur par défaut)
+  const effectiveDate = new Date();
+  effectiveDate.setMonth(effectiveDate.getMonth() + 3);
+  const effectiveDateStr = effectiveDate.toISOString().split("T")[0];
+
+  // Préparer les données du prêt
+  const loan: digitalInsureApi.DILoan = {
+    externalLoanId,
+    numOrder: 1,
+    type: "IMMO_AMORTISSABLE",
+    amount: parseInt(context.montantPret) || 100000,
+    duration: parseInt(context.dureePret) || 240,
+    residualValue: 0,
+    rate: parseFloat(context.tauxPret) || 2.5,
+    rateType: "FIXE",
+    deferredType: "AUCUN",
+    deferredDuration: 0,
+    effectiveDate: effectiveDateStr,
+    periodicityInsurance: "MENSUELLE",
+    periodicityRefund: "MENSUELLE",
+    purposeOfFinancing: context.typeBien?.toLowerCase().includes("appartement") || context.typeBien?.toLowerCase().includes("maison") ? "RESI_PRINCIPALE" : "CREDIT_CONSO",
+    signingDate: context.dateSignature || new Date().toISOString().split("T")[0],
+  };
+
+  // Préparer les garanties adaptées au type de bien
+  const quotite = parseInt(context.quotite) || 100;
+  const typePret: "IMMO_IN_FINE" | "IMMO_AMORTISSABLE" = loan.type === "IMMO_IN_FINE" ? "IMMO_IN_FINE" : "IMMO_AMORTISSABLE";
+  
+  const { getGarantiesParDefaut, buildCoverages } = await import("../api/garantiesExplications");
+  const garantiesConfig = getGarantiesParDefaut(loan.purposeOfFinancing, typePret);
+  
+  let garantiesActives = [...garantiesConfig.obligatoires];
+  
+  if (context.garantiesOptionnelles) {
+    try {
+      const garantiesChoisies = JSON.parse(context.garantiesOptionnelles);
+      garantiesActives = [...garantiesActives, ...garantiesChoisies];
+    } catch (e) {
+      garantiesActives = [...garantiesConfig.obligatoires, ...garantiesConfig.optionnelles];
+    }
+  } else if (garantiesConfig.optionnelles.length === 0) {
+    garantiesActives = garantiesConfig.obligatoires;
+  } else {
+    garantiesActives = [...garantiesConfig.obligatoires, ...garantiesConfig.optionnelles];
+  }
+  
+  const requirement: digitalInsureApi.DIRequirement = {
+    insuredId: externalInsuredId,
+    loanId: externalLoanId,
+    premiumType: bestOffer.premiumType,
+    coverages: buildCoverages(garantiesActives, quotite, 90),
+  };
+
+  return {
+    contextType: "NEW",
+    insureds: [insured],
+    loans: [loan],
+    requirements: [requirement],
+  };
 }
 
 /**
