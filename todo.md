@@ -120,3 +120,11 @@
 - [x] Implémenter les endpoints de création et complétion de dossier
 - [ ] Intégrer Digital Insure dans le workflow du chat
 - [ ] Tester les appels API avec les credentials fournis
+
+
+## Intégration Digital Insure dans le Chat
+- [x] Ajouter la détection du type d'assurance (prêt immobilier)
+- [x] Mapper les données du contexte vers le format Digital Insure
+- [x] Appeler getTarifs une fois toutes les informations collectées
+- [x] Afficher les tarifs des différents assureurs
+- [x] Gérer les erreurs API et demander les champs manquants
