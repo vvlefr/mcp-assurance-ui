@@ -103,6 +103,7 @@ export const chatContexts = mysqlTable("chat_contexts", {
   encoursCredits: int("encoursCredits"), // 0 = non, 1 = oui, null = non répondu
   nombreEmprunteurs: int("nombreEmprunteurs"), // 1 = seul, 2 = à deux
   quotite: int("quotite"), // Quotité d'assurance (50 ou 100)
+  garantiesOptionnelles: text("garantiesOptionnelles"), // Garanties optionnelles choisies (JSON: ["IPT", "IPP", "ITT"])
   revenuMensuel: int("revenuMensuel"),
   // Métadonnées
   clientDataJson: text("clientDataJson"), // Données complètes du CRM en JSON

@@ -1,0 +1,1 @@
+ALTER TABLE `chat_contexts` ADD `garantiesOptionnelles` text;

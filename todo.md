@@ -188,3 +188,19 @@
 - [x] Mettre à jour generateDigitalInsureQuote pour utiliser le taux réel et la quotité calculée
 - [x] Mettre à jour formatContextForDisplay pour afficher les nouveaux champs
 - [ ] Tester le workflow complet avec Guillaume Bidoux
+
+
+## Garanties adaptées au type de bien/prêt
+- [x] Créer une fonction pour déterminer les garanties par défaut selon le type de bien (garantiesExplications.ts)
+- [x] Résidence principale : DC/PTIA + IPT + IPP + ITT (toutes obligatoires)
+- [x] Investissement locatif : DC/PTIA obligatoire + proposer IPT + IPP + ITT en option
+- [x] Résidence secondaire : DC/PTIA + IPT + IPP + ITT (toutes obligatoires)
+- [x] Prêt professionnel : DC/PTIA + IPT + IPP + ITT (toutes obligatoires)
+- [x] Prêt in fine : DC/PTIA uniquement
+- [x] Ajouter des explications claires pour chaque garantie
+- [x] Ajouter le champ garantiesOptionnelles au schéma de base de données
+- [x] Afficher l'explication des garanties avant de générer le devis
+- [x] Pour l'investissement locatif, poser la question des garanties optionnelles avec explications
+- [x] Mettre à jour generateDigitalInsureQuote pour utiliser les garanties adaptées
+- [ ] Améliorer l'extraction LLM pour détecter le choix des garanties optionnelles
+- [ ] Tester le workflow complet avec un investissement locatif

@@ -248,35 +248,43 @@ async function generateDigitalInsureQuote(context: any, clientData: any, premium
       signingDate: context.dateSignature || new Date().toISOString().split("T")[0],
     };
 
-    // Préparer les garanties (DC/PTIA + IPT + IPP + ITT avec quotité du contexte)
+    // Préparer les garanties adaptées au type de bien
     const quotite = parseInt(context.quotite) || 100; // Utiliser la quotité du contexte ou 100% par défaut
+    
+    // Déterminer le type de prêt (in fine ou amortissable)
+    const typePret: "IMMO_IN_FINE" | "IMMO_AMORTISSABLE" = loan.type === "IMMO_IN_FINE" ? "IMMO_IN_FINE" : "IMMO_AMORTISSABLE";
+    
+    // Importer les fonctions de garanties
+    const { getGarantiesParDefaut, buildCoverages } = await import("../api/garantiesExplications");
+    
+    // Déterminer les garanties par défaut selon le type de bien
+    const garantiesConfig = getGarantiesParDefaut(loan.purposeOfFinancing, typePret);
+    
+    // Déterminer les garanties actives
+    let garantiesActives = [...garantiesConfig.obligatoires];
+    
+    // Ajouter les garanties optionnelles si le client les a choisies
+    if (context.garantiesOptionnelles) {
+      try {
+        const garantiesChoisies = JSON.parse(context.garantiesOptionnelles);
+        garantiesActives = [...garantiesActives, ...garantiesChoisies];
+      } catch (e) {
+        // Si le parsing échoue, utiliser toutes les garanties par défaut
+        garantiesActives = [...garantiesConfig.obligatoires, ...garantiesConfig.optionnelles];
+      }
+    } else if (garantiesConfig.optionnelles.length === 0) {
+      // Pas de garanties optionnelles pour ce type de bien, utiliser toutes les obligatoires
+      garantiesActives = garantiesConfig.obligatoires;
+    } else {
+      // Par défaut, inclure toutes les garanties (obligatoires + optionnelles)
+      garantiesActives = [...garantiesConfig.obligatoires, ...garantiesConfig.optionnelles];
+    }
+    
     const requirement: digitalInsureApi.DIRequirement = {
       insuredId: externalInsuredId,
       loanId: externalLoanId,
       premiumType,  // Utiliser le paramètre passé
-      coverages: [
-        {
-          code: "DCPTIA",
-          type: "COVERAGE",
-          percentage: quotite,
-        },
-        {
-          code: "IPT",
-          type: "COVERAGE",
-          percentage: quotite,
-        },
-        {
-          code: "IPP",
-          type: "COVERAGE",
-          percentage: quotite,
-        },
-        {
-          code: "ITT",
-          type: "COVERAGE",
-          percentage: quotite,
-          deductible: 90, // Franchise par défaut
-        },
-      ],
+      coverages: buildCoverages(garantiesActives, quotite, 90),
     };
 
     // Préparer la requête de tarification
@@ -543,8 +551,30 @@ ${formatContextForDisplay(updatedContext)}`;
           responseMessage += missingFields.map((field) => `- ${fieldLabels[field] || field}`).join("\n");
           responseMessage += `\n\nPouvez-vous me fournir ces informations ?`;
         } else {
-          // Toutes les informations sont disponibles, générer le devis
-          responseMessage += `\n\n✅ **Toutes les informations nécessaires sont disponibles !**\n\nGénération de votre devis en cours...`;
+          // Toutes les informations sont disponibles
+          responseMessage += `\n\n✅ **Toutes les informations nécessaires sont disponibles !**`;
+          
+          // Afficher les garanties adaptées au type de bien
+          const { getGarantiesParDefaut, formatGarantiesExplication } = await import("../api/garantiesExplications");
+          const typeBien = updatedContext?.typeBien || "RESI_PRINCIPALE";
+          const garantiesConfig = getGarantiesParDefaut(typeBien, "IMMO_AMORTISSABLE");
+          
+          // Afficher l'explication des garanties
+          responseMessage += formatGarantiesExplication(garantiesConfig);
+          
+          // Si c'est un investissement locatif avec des garanties optionnelles, attendre la réponse du client
+          if (garantiesConfig.optionnelles.length > 0 && updatedContext && !updatedContext.garantiesOptionnelles) {
+            // Ne pas générer le devis tout de suite, attendre la réponse sur les garanties optionnelles
+            return {
+              success: true,
+              message: responseMessage,
+              context: updatedContext,
+              missingFields: [],
+            };
+          }
+          
+          // Générer le devis
+          responseMessage += `\n\n\nGénération de votre devis en cours...`;
           
           // Appeler le comparateur intelligent
           const diResult = await compareInsuranceOffers(updatedContext, clientData);
