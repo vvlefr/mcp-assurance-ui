@@ -177,7 +177,8 @@ try {
         console.log("✅ Tarif disponible:");
         console.log(`  - Cotisation mensuelle: ${tarif.quoteRateResult.primePeriodiqueDevis}€`);
         console.log(`  - Coût total: ${tarif.quoteRateResult.primeGlobaleDevis}€`);
-        console.log(`  - TAEA: ${(tarif.quoteRateResult.taeaDevis * 100).toFixed(2)}%`);
+        console.log(`  - TAEA brut: ${tarif.quoteRateResult.taeaDevis}`);
+        console.log(`  - TAEA affiché: ${(tarif.quoteRateResult.taeaDevis * 100).toFixed(2)}%`);
       }
     });
   }

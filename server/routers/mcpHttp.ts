@@ -115,13 +115,13 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
       message += `**Option 1 : Cotisation Dégressive (CRD)** - ${bestCRD.productLabel || bestCRD.productCode}\n`;
       message += `- Cotisation mensuelle initiale : ${bestCRD.monthlyPremium.toFixed(2)}€\n`;
       message += `- Coût total de l'assurance : ${bestCRD.totalCost.toFixed(2)}€\n`;
-      message += `- TAEA : ${(bestCRD.taea * 100).toFixed(2)}%\n`;
+      message += `- TAEA : ${bestCRD.taea.toFixed(2)}%\n`;
       message += `- Type : La cotisation diminue au fil du temps avec le capital restant dû\n\n`;
 
       message += `**Option 2 : Cotisation Constante (FIXE)** - ${bestFIXE.productLabel || bestFIXE.productCode}\n`;
       message += `- Cotisation mensuelle : ${bestFIXE.monthlyPremium.toFixed(2)}€\n`;
       message += `- Coût total de l'assurance : ${bestFIXE.totalCost.toFixed(2)}€\n`;
-      message += `- TAEA : ${(bestFIXE.taea * 100).toFixed(2)}%\n`;
+      message += `- TAEA : ${bestFIXE.taea.toFixed(2)}%\n`;
       message += `- Type : La cotisation reste identique pendant toute la durée du prêt\n\n`;
 
       message += "\n💡 **Quelle option préférez-vous ?**\n";
@@ -139,12 +139,12 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
       message += `**Option 1 : ${bestCRD.productLabel || bestCRD.productCode}**\n`;
       message += `- Cotisation mensuelle initiale : ${bestCRD.monthlyPremium.toFixed(2)}€\n`;
       message += `- Coût total de l'assurance : ${bestCRD.totalCost.toFixed(2)}€\n`;
-      message += `- TAEA : ${(bestCRD.taea * 100).toFixed(2)}%\n\n`;
+      message += `- TAEA : ${bestCRD.taea.toFixed(2)}%\n\n`;
 
       message += `**Option 2 : ${secondBestCRD.productLabel || secondBestCRD.productCode}**\n`;
       message += `- Cotisation mensuelle initiale : ${secondBestCRD.monthlyPremium.toFixed(2)}€\n`;
       message += `- Coût total de l'assurance : ${secondBestCRD.totalCost.toFixed(2)}€\n`;
-      message += `- TAEA : ${(secondBestCRD.taea * 100).toFixed(2)}%\n\n`;
+      message += `- TAEA : ${secondBestCRD.taea.toFixed(2)}%\n\n`;
 
       const savings = secondBestCRD.totalCost - bestCRD.totalCost;
       message += `\n💰 **Économie avec l'Option 1 : ${savings.toFixed(2)}€ sur toute la durée du prêt**\n`;
@@ -155,7 +155,7 @@ async function compareInsuranceOffers(context: any, clientData: any): Promise<an
       message += `**Offre disponible : ${bestCRD.productLabel || bestCRD.productCode}**\n`;
       message += `- Cotisation mensuelle initiale : ${bestCRD.monthlyPremium.toFixed(2)}€\n`;
       message += `- Coût total de l'assurance : ${bestCRD.totalCost.toFixed(2)}€\n`;
-      message += `- TAEA : ${(bestCRD.taea * 100).toFixed(2)}%\n\n`;
+      message += `- TAEA : ${bestCRD.taea.toFixed(2)}%\n\n`;
     }
 
     return {

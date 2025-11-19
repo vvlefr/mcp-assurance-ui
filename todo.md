@@ -230,3 +230,10 @@
 - [x] Améliorer la détection de "je suis [NOM]" dans le prompt d'extraction LLM
 - [x] Ajouter des exemples concrets pour guider le LLM ("je suis Guillaume Bidoux" → est_client_existant: true)
 - [ ] Tester avec "Bonjour je suis Guillaume Bidoux"
+
+
+## Correction affichage TAEA
+- [x] Vérifier le format du TAEA retourné par l'API (0.8286 = 0.83% sous forme décimale)
+- [x] Corriger l'affichage du TAEA en supprimant la multiplication par 100
+- [x] Le TAEA correct est maintenant 0.83% au lieu de 82.86%
+- [ ] Tester avec les données réelles de Guillaume Bidoux
