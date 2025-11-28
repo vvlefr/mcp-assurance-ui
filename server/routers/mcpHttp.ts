@@ -11,6 +11,7 @@ import {
   getMissingFields,
   formatContextForDisplay,
 } from "../api/chatContext";
+import { generateQuotePdf, type QuotePdfData } from "../services/pdfGenerator";
 
 /**
  * Routeur pour le workflow du chat intelligent avec intégration directe des API
@@ -993,34 +994,35 @@ ${formatContextForDisplay(updatedContext)}`;
           };
         }
 
-        // Générer les données du PDF
-        const pdfData = {
+        // Préparer les données pour le PDF
+        const pdfData: QuotePdfData = {
           quoteId: `DEVIS_${Date.now()}`,
           generatedAt: new Date().toISOString(),
           borrower: {
             name: context.nomComplet || "Non renseigné",
-            birthDate: context.dateNaissance || "Non renseigné",
+            birthDate: context.dateNaissance || "",
             email: context.email || "Non renseigné",
-            phone: context.telephone || "Non renseigné",
+            phone: context.telephone || undefined,
             address: context.codePostal || "Non renseigné",
             professionalStatus: context.statutProfessionnel || "Non renseigné",
-            smoker: context.fumeur ? "Oui" : "Non",
+            smoker: Boolean(context.fumeur),
           },
           loan: {
-            amount: context.montantPret || "Non renseigné",
-            duration: context.dureePret || "Non renseigné",
-            rate: context.tauxPret || "Non renseigné",
-            propertyType: context.typeBien || "Non renseigné",
-            signingDate: context.dateSignature || "Non renseigné",
+            amount: parseInt(String(context.montantPret || "0")) || 0,
+            duration: parseInt(String(context.dureePret || "0")) || 0,
+            rate: parseFloat(String(context.tauxPret || "0")) || 0,
+            propertyType: context.typeBien || "RESI_PRINCIPALE",
+            signingDate: context.dateSignature || new Date().toISOString(),
           },
           insurance: {
             productCode: input.productCode,
             productName: input.productName,
-            premiumType: input.premiumType === "CRD" ? "Cotisation dégressive" : "Cotisation constante",
+            premiumType: input.premiumType,
             monthlyPremium: input.monthlyPremium,
             totalCost: input.totalCost,
             taeaPercent: input.taeaPercent,
-            coverages: ["Décès/PTIA", "IPT", "IPP", "ITT"],
+            coveragePercentage: context.quotite || 100,
+            coverages: ["DCPTIA", "IPT", "IPP", "ITT"],
           },
           broker: {
             name: "Titan Assurances",
@@ -1031,12 +1033,27 @@ ${formatContextForDisplay(updatedContext)}`;
           },
         };
 
-        // Pour l'instant, retourner les données formatées en JSON
-        // Une implémentation complète utiliserait une librairie comme pdfkit ou puppeteer
+        // Ajouter le co-emprunteur si présent
+        if (context.nombreEmprunteurs === 2 && context.coNomComplet) {
+          pdfData.coBorrower = {
+            name: context.coNomComplet,
+            birthDate: context.coDateNaissance || "",
+            email: context.coEmail || "",
+            professionalStatus: context.coStatutProfessionnel || "Non renseigné",
+            smoker: Boolean(context.coFumeur),
+            coveragePercentage: context.coQuotite || 50,
+          };
+        }
+
+        // Générer le PDF
+        const pdfBuffer = await generateQuotePdf(pdfData);
+
+        // Retourner le PDF encodé en base64
         return {
           success: true,
-          pdfData,
-          message: "Données du devis générées avec succès",
+          pdfBase64: pdfBuffer.toString("base64"),
+          filename: `devis_${input.productCode}_${Date.now()}.pdf`,
+          message: "PDF généré avec succès",
         };
       } catch (error: any) {
         console.error("[PDF] Erreur:", error);

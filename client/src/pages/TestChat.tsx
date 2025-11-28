@@ -260,22 +260,27 @@ export default function TestChat() {
         sessionId,
       });
 
-      if (result.success && result.pdfData) {
-        // Créer un blob avec les données JSON formatées
-        const pdfContent = JSON.stringify(result.pdfData, null, 2);
-        const blob = new Blob([pdfContent], { type: "application/json" });
+      if (result.success && result.pdfBase64) {
+        // Convertir le base64 en blob PDF
+        const byteCharacters = atob(result.pdfBase64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: "application/pdf" });
         const url = URL.createObjectURL(blob);
 
-        // Télécharger le fichier
+        // Télécharger le fichier PDF
         const a = document.createElement("a");
         a.href = url;
-        a.download = `devis_${offer.product_code}_${Date.now()}.json`;
+        a.download = result.filename || `devis_${offer.product_code}_${Date.now()}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        toast.success("Devis téléchargé avec succès");
+        toast.success("Devis PDF téléchargé avec succès");
       } else {
         toast.error(result.error || "Erreur lors de la génération du PDF");
       }
