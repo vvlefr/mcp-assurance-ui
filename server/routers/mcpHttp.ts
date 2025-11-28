@@ -798,4 +798,252 @@ ${formatContextForDisplay(updatedContext)}`;
   getQuotes: protectedProcedure.query(async () => {
     return getAllQuotes();
   }),
+
+  /**
+   * Procédure pour initier une souscription et obtenir l'URL de redirection
+   */
+  initiateSubscription: protectedProcedure
+    .input(
+      z.object({
+        productCode: z.string(),
+        premiumType: z.enum(["CRD", "FIXE"]),
+        sessionId: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const sessionId = await getSessionIdFromUUID(input.sessionId, ctx.user.id);
+        if (!sessionId) {
+          return {
+            success: false,
+            error: "Session non trouvée",
+          };
+        }
+
+        const context = await getSessionContext(sessionId);
+        if (!context) {
+          return {
+            success: false,
+            error: "Contexte de session non trouvé",
+          };
+        }
+
+        // Créer le dossier dans Digital Insure
+        const externalRecordId = `BIZ_${Date.now()}`;
+        const externalInsuredId = `INS_${Date.now()}`;
+        const externalLoanId = `LOAN_${Date.now()}`;
+
+        const effectiveDate = new Date();
+        effectiveDate.setMonth(effectiveDate.getMonth() + 3);
+
+        const scenarioRecordDataModel = {
+          contextType: "NEW",
+          insureds: [{
+            externalInsuredId,
+            numOrder: 1,
+            personDataModel: {
+              gender: "MR",
+              firstname: context.nomComplet?.split(" ")[0] || "Prénom",
+              lastname: context.nomComplet?.split(" ").slice(1).join(" ") || "Nom",
+              dateOfBirth: context.dateNaissance || "1980-01-01",
+              email: context.email || "contact@example.com",
+            },
+            address: {
+              adrAddressLine1: "1 rue de la Paix",
+              adrZipcode: context.codePostal || "75001",
+              adrCity: "Paris",
+              adrCountry: "FRANCE",
+            },
+            countryOfResidence: "FRANCE",
+            cityOfBirth: "Paris",
+            professionalCategory: mapProfessionalCategory(context.statutProfessionnel || undefined),
+            smoker: Boolean(context.fumeur),
+            esmoker: false,
+            esmokerNoNicotine: false,
+            manualWork: false,
+            exactJob: context.statutProfessionnel || "Employé",
+            socialRegime: "SALARIE",
+            manualWorkRisk: false,
+            workRisk: false,
+            dangerousProduct: false,
+          }],
+          loans: [{
+            externalLoanId,
+            numOrder: 1,
+            type: "IMMO_AMORTISSABLE",
+            amount: parseInt(String(context.montantPret || "100000")),
+            duration: parseInt(String(context.dureePret || "240")),
+            residualValue: 0,
+            rate: parseFloat(String(context.tauxPret || "3.5")),
+            rateType: "FIXE",
+            deferredType: "AUCUN",
+            deferredDuration: 0,
+            effectiveDate: effectiveDate.toISOString().split("T")[0],
+            periodicityInsurance: "MENSUELLE",
+            periodicityRefund: "MENSUELLE",
+            purposeOfFinancing: "RESI_PRINCIPALE",
+            signingDate: convertDateToISO(context.dateSignature || undefined),
+          }],
+          requirements: [{
+            insuredId: externalInsuredId,
+            loanId: externalLoanId,
+            premiumType: input.premiumType,
+            coverages: [
+              { code: "DCPTIA", type: "COVERAGE", percentage: 100 },
+              { code: "IPT", type: "COVERAGE", percentage: 100 },
+              { code: "IPP", type: "COVERAGE", percentage: 100 },
+              { code: "ITT", type: "COVERAGE", percentage: 100, deductible: 90 },
+            ],
+          }],
+        };
+
+        // Créer le dossier
+        const createResult = await digitalInsureApi.createBusinessRecord(
+          externalRecordId,
+          scenarioRecordDataModel
+        );
+
+        if (!createResult.success) {
+          return {
+            success: false,
+            error: createResult.error || "Erreur lors de la création du dossier",
+          };
+        }
+
+        const compareRecordId = createResult.data?.compareRecordId;
+
+        if (!compareRecordId) {
+          return {
+            success: false,
+            error: "Impossible de récupérer l'identifiant du dossier",
+          };
+        }
+
+        // Choisir le produit
+        const chooseResult = await digitalInsureApi.chooseInsurerProduct(
+          compareRecordId,
+          input.productCode
+        );
+
+        if (!chooseResult.success) {
+          return {
+            success: false,
+            error: chooseResult.error || "Erreur lors de la sélection du produit",
+          };
+        }
+
+        // Obtenir l'URL SSO pour accéder à l'extranet
+        const accessResult = await digitalInsureApi.getBrokerInsurerAccess(compareRecordId);
+
+        if (accessResult.success && accessResult.data?.ssoUrl) {
+          return {
+            success: true,
+            ssoUrl: accessResult.data.ssoUrl,
+            compareRecordId,
+            message: "Redirection vers le portail de souscription Digital Insure",
+          };
+        }
+
+        // Fallback: retourner un lien vers l'extranet Digital Insure
+        return {
+          success: true,
+          ssoUrl: `https://catwww.accelerassur.fr/extranet/dossier/${compareRecordId}`,
+          compareRecordId,
+          message: "Dossier créé - Accédez à l'extranet Digital Insure pour finaliser",
+        };
+      } catch (error: any) {
+        console.error("[Subscription] Erreur:", error);
+        return {
+          success: false,
+          error: error.message || "Erreur inconnue",
+        };
+      }
+    }),
+
+  /**
+   * Procédure pour générer un PDF de devis
+   */
+  generateQuotePdf: protectedProcedure
+    .input(
+      z.object({
+        productCode: z.string(),
+        productName: z.string(),
+        premiumType: z.enum(["CRD", "FIXE"]),
+        monthlyPremium: z.number(),
+        totalCost: z.number(),
+        taeaPercent: z.number(),
+        sessionId: z.string(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const sessionId = await getSessionIdFromUUID(input.sessionId, ctx.user.id);
+        if (!sessionId) {
+          return {
+            success: false,
+            error: "Session non trouvée",
+          };
+        }
+
+        const context = await getSessionContext(sessionId);
+        if (!context) {
+          return {
+            success: false,
+            error: "Contexte de session non trouvé",
+          };
+        }
+
+        // Générer les données du PDF
+        const pdfData = {
+          quoteId: `DEVIS_${Date.now()}`,
+          generatedAt: new Date().toISOString(),
+          borrower: {
+            name: context.nomComplet || "Non renseigné",
+            birthDate: context.dateNaissance || "Non renseigné",
+            email: context.email || "Non renseigné",
+            phone: context.telephone || "Non renseigné",
+            address: context.codePostal || "Non renseigné",
+            professionalStatus: context.statutProfessionnel || "Non renseigné",
+            smoker: context.fumeur ? "Oui" : "Non",
+          },
+          loan: {
+            amount: context.montantPret || "Non renseigné",
+            duration: context.dureePret || "Non renseigné",
+            rate: context.tauxPret || "Non renseigné",
+            propertyType: context.typeBien || "Non renseigné",
+            signingDate: context.dateSignature || "Non renseigné",
+          },
+          insurance: {
+            productCode: input.productCode,
+            productName: input.productName,
+            premiumType: input.premiumType === "CRD" ? "Cotisation dégressive" : "Cotisation constante",
+            monthlyPremium: input.monthlyPremium,
+            totalCost: input.totalCost,
+            taeaPercent: input.taeaPercent,
+            coverages: ["Décès/PTIA", "IPT", "IPP", "ITT"],
+          },
+          broker: {
+            name: "Titan Assurances",
+            orias: "XXXXXX",
+            address: "Paris, France",
+            phone: "01 XX XX XX XX",
+            email: "contact@titan-assurances.fr",
+          },
+        };
+
+        // Pour l'instant, retourner les données formatées en JSON
+        // Une implémentation complète utiliserait une librairie comme pdfkit ou puppeteer
+        return {
+          success: true,
+          pdfData,
+          message: "Données du devis générées avec succès",
+        };
+      } catch (error: any) {
+        console.error("[PDF] Erreur:", error);
+        return {
+          success: false,
+          error: error.message || "Erreur inconnue",
+        };
+      }
+    }),
 });
