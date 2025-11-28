@@ -68,15 +68,35 @@ Générer un devis d'assurance de prêt immobilier complet.
 - `premium_type` (optionnel): `CRD` ou `FIXE`
 - `include_optional_coverages` (optionnel): Inclure garanties optionnelles
 
-**Exemple de réponse:**
+**Paramètres co-emprunteur (optionnels):**
+- `has_co_borrower` (optionnel): Y a-t-il un co-emprunteur ? (boolean)
+- `co_borrower_first_name` (optionnel): Prénom du co-emprunteur
+- `co_borrower_last_name` (optionnel): Nom du co-emprunteur
+- `co_borrower_birth_date` (optionnel): Date de naissance (YYYY-MM-DD)
+- `co_borrower_email` (optionnel): Email du co-emprunteur
+- `co_borrower_gender` (optionnel): `MR` ou `MME`
+- `co_borrower_is_smoker` (optionnel): Fumeur ? (boolean)
+- `co_borrower_professional_category` (optionnel): Catégorie professionnelle
+- `co_borrower_coverage_percentage` (optionnel): Quotité du co-emprunteur
+
+**Exemple de réponse (avec co-emprunteur):**
 ```json
 {
   "success": true,
   "quote_id": "QUOTE_1234567890",
   "borrower": {
     "name": "Jean Dupont",
-    "birth_date": "1985-06-15"
+    "birth_date": "1985-06-15",
+    "email": "jean.dupont@email.com",
+    "coverage_percentage": 50
   },
+  "co_borrower": {
+    "name": "Marie Dupont",
+    "birth_date": "1987-03-20",
+    "email": "marie.dupont@email.com",
+    "coverage_percentage": 50
+  },
+  "borrowers_count": 2,
   "loan": {
     "amount": 250000,
     "duration_months": 240,

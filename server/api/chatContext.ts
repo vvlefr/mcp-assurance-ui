@@ -143,6 +143,19 @@ export function mergeContextData(
     merged.revenuMensuel = newData.revenu_mensuel;
   }
 
+  // Informations co-emprunteur
+  if (newData.co_nom_complet) merged.coNomComplet = newData.co_nom_complet;
+  if (newData.co_date_naissance) merged.coDateNaissance = newData.co_date_naissance;
+  if (newData.co_email) merged.coEmail = newData.co_email;
+  if (newData.co_telephone) merged.coTelephone = newData.co_telephone;
+  if (newData.co_statut_professionnel) merged.coStatutProfessionnel = newData.co_statut_professionnel;
+  if (newData.co_fumeur !== undefined && newData.co_fumeur !== null) {
+    merged.coFumeur = newData.co_fumeur ? 1 : 0;
+  }
+  if (newData.co_quotite !== undefined && newData.co_quotite !== null) {
+    merged.coQuotite = newData.co_quotite;
+  }
+
   // Données CRM
   if (newData.clientDataJson) merged.clientDataJson = newData.clientDataJson;
 
@@ -189,10 +202,19 @@ export function getMissingFields(context: ChatContext | null): string[] {
   
   // Santé et risques (CRITIQUES)
   if (context.fumeur === null) missing.push("fumeur");
-  
+
+  // Informations co-emprunteur (si 2 emprunteurs)
+  if (context.nombreEmprunteurs === 2) {
+    if (!context.coNomComplet) missing.push("co_nom_complet");
+    if (!context.coDateNaissance) missing.push("co_date_naissance");
+    if (!context.coEmail) missing.push("co_email");
+    if (!context.coStatutProfessionnel) missing.push("co_statut_professionnel");
+    if (context.coFumeur === null) missing.push("co_fumeur");
+  }
+
   // Note: Les champs suivants ont des valeurs par défaut dans generateDigitalInsureQuote:
   // - taux_pret: 2.5% par défaut
-  // - quotite: 100% par défaut
+  // - quotite: 100% par défaut (ou 50% si 2 emprunteurs)
   // - garanties: DC/PTIA + IPT + IPP + ITT par défaut
   // - franchise_itt: 90 jours par défaut
   // - encours_credits: false par défaut
@@ -229,6 +251,21 @@ export function formatContextForDisplay(context: ChatContext | null): string {
   if (context.quotite) lines.push(`- Quotité d'assurance: ${context.quotite}%`);
   if (context.fumeur !== null) lines.push(`- Fumeur: ${context.fumeur ? "Oui" : "Non"}`);
   if (context.revenuMensuel) lines.push(`- Revenu mensuel: ${context.revenuMensuel}€`);
+
+  // Co-emprunteur
+  if (context.nombreEmprunteurs === 2) {
+    lines.push("");
+    lines.push("**Co-emprunteur:**");
+    if (context.coNomComplet) lines.push(`- Nom: ${context.coNomComplet}`);
+    if (context.coDateNaissance) {
+      const coDate = new Date(context.coDateNaissance);
+      lines.push(`- Date de naissance: ${coDate.toLocaleDateString("fr-FR")}`);
+    }
+    if (context.coEmail) lines.push(`- Email: ${context.coEmail}`);
+    if (context.coStatutProfessionnel) lines.push(`- Statut professionnel: ${context.coStatutProfessionnel}`);
+    if (context.coQuotite) lines.push(`- Quotité d'assurance: ${context.coQuotite}%`);
+    if (context.coFumeur !== null) lines.push(`- Fumeur: ${context.coFumeur ? "Oui" : "Non"}`);
+  }
 
   return lines.join("\n");
 }

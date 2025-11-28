@@ -105,6 +105,14 @@ export const chatContexts = mysqlTable("chat_contexts", {
   quotite: int("quotite"), // Quotité d'assurance (50 ou 100)
   garantiesOptionnelles: text("garantiesOptionnelles"), // Garanties optionnelles choisies (JSON: ["IPT", "IPP", "ITT"])
   revenuMensuel: int("revenuMensuel"),
+  // Informations co-emprunteur
+  coNomComplet: varchar("coNomComplet", { length: 255 }),
+  coDateNaissance: varchar("coDateNaissance", { length: 20 }),
+  coEmail: varchar("coEmail", { length: 320 }),
+  coTelephone: varchar("coTelephone", { length: 20 }),
+  coStatutProfessionnel: varchar("coStatutProfessionnel", { length: 100 }),
+  coFumeur: int("coFumeur"), // 0 = non, 1 = oui, null = non répondu
+  coQuotite: int("coQuotite"), // Quotité du co-emprunteur (ex: 50)
   // Métadonnées
   clientDataJson: text("clientDataJson"), // Données complètes du CRM en JSON
   createdAt: timestamp("createdAt").defaultNow().notNull(),

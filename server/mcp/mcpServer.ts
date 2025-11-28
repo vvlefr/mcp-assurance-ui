@@ -138,6 +138,25 @@ mcpServer.tool(
     coverage_percentage: z.number().min(1).max(100).default(100).describe("Quotité d'assurance en pourcentage (ex: 100 pour 100%, 50 pour 50%)"),
     premium_type: z.enum(["CRD", "FIXE"]).default("CRD").describe("Type de cotisation: CRD (dégressive) ou FIXE (constante)"),
     include_optional_coverages: z.boolean().default(true).describe("Inclure les garanties optionnelles (IPT, IPP, ITT) si applicables"),
+
+    // Co-emprunteur (optionnel)
+    has_co_borrower: z.boolean().default(false).describe("Y a-t-il un co-emprunteur ?"),
+    co_borrower_first_name: z.string().optional().describe("Prénom du co-emprunteur"),
+    co_borrower_last_name: z.string().optional().describe("Nom du co-emprunteur"),
+    co_borrower_birth_date: z.string().optional().describe("Date de naissance du co-emprunteur (YYYY-MM-DD)"),
+    co_borrower_email: z.string().optional().describe("Email du co-emprunteur"),
+    co_borrower_gender: z.enum(["MR", "MME"]).optional().describe("Civilité du co-emprunteur"),
+    co_borrower_is_smoker: z.boolean().optional().describe("Le co-emprunteur est-il fumeur ?"),
+    co_borrower_professional_category: z.enum([
+      "CADRE_SAL",
+      "NON_CADRE_SAL_EMPLOYE",
+      "PROFESSION_LIBERALE",
+      "COMMERCANT_ARTISAN",
+      "FONCTIONNAIRE",
+      "RETRAITE",
+      "SANS_EMPLOI"
+    ]).optional().describe("Catégorie professionnelle du co-emprunteur"),
+    co_borrower_coverage_percentage: z.number().min(1).max(100).optional().describe("Quotité d'assurance du co-emprunteur (ex: 50%)"),
   },
   async (params) => {
     try {
@@ -154,7 +173,7 @@ mcpServer.tool(
       // Date de signature
       const signingDate = params.signing_date || new Date().toISOString().split("T")[0];
 
-      // Préparer les données de l'assuré
+      // Préparer les données de l'assuré principal
       const insured: digitalInsureApi.DIInsured = {
         externalInsuredId,
         numOrder: 1,
@@ -190,6 +209,49 @@ mcpServer.tool(
         outStandings: [],
       };
 
+      // Liste des assurés (avec co-emprunteur si présent)
+      const insureds: digitalInsureApi.DIInsured[] = [insured];
+
+      // Co-emprunteur (si présent)
+      const externalCoInsuredId = `CO_INS_${Date.now()}`;
+      if (params.has_co_borrower && params.co_borrower_first_name && params.co_borrower_last_name && params.co_borrower_birth_date) {
+        const coInsured: digitalInsureApi.DIInsured = {
+          externalInsuredId: externalCoInsuredId,
+          numOrder: 2,
+          personDataModel: {
+            gender: params.co_borrower_gender || "MR",
+            firstname: params.co_borrower_first_name,
+            lastname: params.co_borrower_last_name,
+            dateOfBirth: params.co_borrower_birth_date,
+            email: params.co_borrower_email || params.borrower_email,
+            mobilePhoneNumber: params.borrower_phone || "0600000000",
+          },
+          address: {
+            adrAddressLine1: "1 rue de la Paix",
+            adrAddressLine2: "",
+            adrZipcode: params.borrower_zip_code,
+            adrCity: params.borrower_city || "Paris",
+            adrCountry: "FRANCE",
+          },
+          countryOfResidence: "FRANCE",
+          cityOfBirth: params.borrower_city || "Paris",
+          professionalCategory: params.co_borrower_professional_category || "CADRE_SAL",
+          smoker: params.co_borrower_is_smoker || false,
+          esmoker: false,
+          esmokerNoNicotine: false,
+          annualMilage: "0",
+          workAtHeight: "0",
+          manualWork: false,
+          exactJob: params.co_borrower_professional_category || "CADRE_SAL",
+          socialRegime: "SALARIE",
+          manualWorkRisk: false,
+          workRisk: false,
+          dangerousProduct: false,
+          outStandings: [],
+        };
+        insureds.push(coInsured);
+      }
+
       // Préparer les données du prêt
       const loan: digitalInsureApi.DILoan = {
         externalLoanId,
@@ -217,12 +279,24 @@ mcpServer.tool(
         garantiesActives = [...garantiesActives, ...garantiesConfig.optionnelles];
       }
 
-      const requirement: digitalInsureApi.DIRequirement = {
+      // Préparer les requirements (un par assuré)
+      const requirements: digitalInsureApi.DIRequirement[] = [{
         insuredId: externalInsuredId,
         loanId: externalLoanId,
         premiumType: params.premium_type,
         coverages: buildCoverages(garantiesActives, params.coverage_percentage, 90),
-      };
+      }];
+
+      // Ajouter les requirements du co-emprunteur si présent
+      if (params.has_co_borrower && params.co_borrower_first_name && params.co_borrower_last_name) {
+        const coQuotite = params.co_borrower_coverage_percentage || params.coverage_percentage;
+        requirements.push({
+          insuredId: externalCoInsuredId,
+          loanId: externalLoanId,
+          premiumType: params.premium_type,
+          coverages: buildCoverages(garantiesActives, coQuotite, 90),
+        });
+      }
 
       // Préparer la requête de tarification
       const tarificationRequest: digitalInsureApi.DITarificationRequest = {
@@ -234,9 +308,9 @@ mcpServer.tool(
         insuranceType: "ADE",
         scenarioRecordDataModel: {
           contextType: "NEW",
-          insureds: [insured],
+          insureds,
           loans: [loan],
-          requirements: [requirement],
+          requirements,
         },
       };
 
@@ -288,28 +362,47 @@ mcpServer.tool(
         // Trier par coût total croissant
         offers.sort((a: any, b: any) => a.total_cost - b.total_cost);
 
+        // Préparer les informations des emprunteurs
+        const borrowerInfo: any = {
+          name: `${params.borrower_first_name} ${params.borrower_last_name}`,
+          birth_date: params.borrower_birth_date,
+          email: params.borrower_email,
+          coverage_percentage: params.coverage_percentage,
+        };
+
+        const responseData: any = {
+          success: true,
+          quote_id: `QUOTE_${Date.now()}`,
+          borrower: borrowerInfo,
+          loan: {
+            amount: params.loan_amount,
+            duration_months: params.loan_duration_months,
+            duration_years: Math.round(params.loan_duration_months / 12),
+            rate_percent: params.loan_rate,
+            property_type: params.property_type,
+          },
+          offers,
+          best_offer: offers[0],
+          offers_count: offers.length,
+        };
+
+        // Ajouter le co-emprunteur si présent
+        if (params.has_co_borrower && params.co_borrower_first_name && params.co_borrower_last_name) {
+          responseData.co_borrower = {
+            name: `${params.co_borrower_first_name} ${params.co_borrower_last_name}`,
+            birth_date: params.co_borrower_birth_date,
+            email: params.co_borrower_email,
+            coverage_percentage: params.co_borrower_coverage_percentage || params.coverage_percentage,
+          };
+          responseData.borrowers_count = 2;
+        } else {
+          responseData.borrowers_count = 1;
+        }
+
         return {
           content: [{
             type: "text" as const,
-            text: JSON.stringify({
-              success: true,
-              quote_id: `QUOTE_${Date.now()}`,
-              borrower: {
-                name: `${params.borrower_first_name} ${params.borrower_last_name}`,
-                birth_date: params.borrower_birth_date,
-                email: params.borrower_email,
-              },
-              loan: {
-                amount: params.loan_amount,
-                duration_months: params.loan_duration_months,
-                duration_years: Math.round(params.loan_duration_months / 12),
-                rate_percent: params.loan_rate,
-                property_type: params.property_type,
-              },
-              offers,
-              best_offer: offers[0],
-              offers_count: offers.length,
-            }, null, 2),
+            text: JSON.stringify(responseData, null, 2),
           }],
         };
       } else {
