@@ -5,7 +5,7 @@ import { QuoteComparison, type InsuranceOffer } from "@/components/QuoteCard";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Server, ArrowLeft, MessageCircle } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { toast } from "sonner";
 
 interface Message {
@@ -27,18 +27,32 @@ interface Message {
 
 export default function TestChat() {
   const { user, isAuthenticated } = useAuth();
+  const searchString = useSearch();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentOffers, setCurrentOffers] = useState<InsuranceOffer[] | null>(null);
   const [currentLoanInfo, setCurrentLoanInfo] = useState<{ amount?: number; duration?: number } | null>(null);
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [sessionLoaded, setSessionLoaded] = useState(false);
 
   // Récupérer les sessions existantes
   const { data: sessions, isLoading: sessionsLoading } = trpc.chat.getSessions.useQuery(
     { isAdmin: 0 },
     { enabled: isAuthenticated }
   );
+
+  // Charger la session depuis l'URL si présente
+  useEffect(() => {
+    if (!sessionLoaded && searchString) {
+      const params = new URLSearchParams(searchString);
+      const urlSessionId = params.get("session");
+      if (urlSessionId) {
+        setSessionId(urlSessionId);
+        setSessionLoaded(true);
+      }
+    }
+  }, [searchString, sessionLoaded]);
 
   // Créer une nouvelle session
   const createSessionMutation = trpc.chat.createSession.useMutation({

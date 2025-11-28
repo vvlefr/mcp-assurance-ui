@@ -282,8 +282,8 @@ export default function QuotesHistory() {
 
                   {/* Actions */}
                   <div className="flex gap-3">
-                    <Link href="/test-chat" className="flex-1">
-                      <Button variant="outline" className="w-full gap-2">
+                    <Link href={`/test-chat?session=${selectedSession}`} className="flex-1">
+                      <Button className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700">
                         <MessageCircle className="h-4 w-4" />
                         Continuer cette conversation
                       </Button>
