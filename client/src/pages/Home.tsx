@@ -14,6 +14,7 @@ import {
   Users,
   FileText,
   ArrowRight,
+  BarChart3,
 } from "lucide-react";
 import { APP_TITLE, getLoginUrl } from "@/const";
 import { Link } from "wouter";
@@ -111,7 +112,43 @@ export default function Home() {
           </div>
 
           {/* Main Actions */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Dashboard */}
+            <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 border-transparent hover:border-blue-200">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <BarChart3 className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Dashboard</CardTitle>
+                    <CardDescription>Vue d'ensemble</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-slate-600">
+                  Statistiques, activité récente et indicateurs de performance.
+                </p>
+                <ul className="text-xs text-slate-500 space-y-1">
+                  <li className="flex items-center gap-2">
+                    <TrendingUp className="h-3 w-3 text-emerald-500" />
+                    KPIs en temps réel
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <BarChart3 className="h-3 w-3 text-blue-400" />
+                    Statistiques détaillées
+                  </li>
+                </ul>
+                <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 group-hover:shadow-lg">
+                  <Link href="/dashboard">
+                    Voir le Dashboard
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Nouveau Devis */}
             <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 border-transparent hover:border-indigo-200">
               <CardHeader>
