@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import TestChat from "./pages/TestChat";
 import AdminConfig from "./pages/AdminConfig";
 import McpServerPage from "./pages/McpServerPage";
+import QuotesHistory from "./pages/QuotesHistory";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -15,6 +16,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/test-chat" component={TestChat} />
+      <Route path="/quotes-history" component={QuotesHistory} />
       <Route path="/admin/config" component={AdminConfig} />
       <Route path="/admin/mcp" component={McpServerPage} />
       <Route path="/404" component={NotFound} />
