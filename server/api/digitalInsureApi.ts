@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from "axios";
+import { HttpsProxyAgent } from "https-proxy-agent";
 
 /**
  * Module pour les appels API Digital Insure (DI)
@@ -6,6 +7,10 @@ import axios, { AxiosInstance } from "axios";
  */
 
 import { debugLog } from '../debug-logger';
+
+// Configuration du proxy si présent dans l'environnement
+const httpsProxy = process.env.https_proxy || process.env.HTTPS_PROXY;
+const proxyAgent = httpsProxy ? new HttpsProxyAgent(httpsProxy) : undefined;
 
 const DI_BASE_URL = "https://catwww.accelerassur.fr/accelerassur-webservice/ws";
 const DI_API_LOGIN = "DISTRIB.TITANASSURANCESRECETTE_EVI_API";
@@ -27,13 +32,17 @@ async function getAuthenticatedClient(): Promise<AxiosInstance> {
         Authorization: `Bearer ${cachedToken}`,
         "Content-Type": "application/json",
       },
+      // @ts-ignore - httpsAgent pour le support proxy
+      httpsAgent: proxyAgent,
+      proxy: false,
     });
   }
 
   // Obtenir un nouveau token
   console.log('[Digital Insure] Demande d\'un nouveau token avec login:', DI_API_LOGIN);
-  
+
   try {
+    // GET avec basic auth et support proxy
     const tokenResponse = await axios.get(
       `${DI_BASE_URL}/security/oauth2/token`,
       {
@@ -41,13 +50,37 @@ async function getAuthenticatedClient(): Promise<AxiosInstance> {
           username: DI_API_LOGIN,
           password: DI_API_PASSWORD,
         },
+        headers: {
+          'Accept': 'application/json',
+        },
+        maxRedirects: 5,
+        validateStatus: (status) => status < 500,
+        // @ts-ignore - httpsAgent peut accepter un HttpsProxyAgent
+        httpsAgent: proxyAgent,
+        proxy: false, // Désactiver le proxy automatique d'axios car on utilise httpsAgent
       }
     );
+
+    console.log('[Digital Insure] Réponse token status:', tokenResponse.status);
+    console.log('[Digital Insure] Réponse token headers:', JSON.stringify(tokenResponse.headers));
+    console.log('[Digital Insure] Réponse token data type:', typeof tokenResponse.data);
+    console.log('[Digital Insure] Réponse token data:', JSON.stringify(tokenResponse.data).substring(0, 300));
+
+    // Accepter 200 et 202 (Accepted) si le token est présent
+    if (tokenResponse.status !== 200 && tokenResponse.status !== 202) {
+      console.error('[Digital Insure] Erreur token, status:', tokenResponse.status);
+      throw new Error(`Token request failed with status ${tokenResponse.status}`);
+    }
+
+    if (!tokenResponse.data?.access_token) {
+      console.error('[Digital Insure] Token non trouvé dans la réponse');
+      throw new Error('Token not found in response');
+    }
 
     cachedToken = tokenResponse.data.access_token;
     // Le token expire généralement après 1 heure, on le cache pour 55 minutes
     tokenExpiry = Date.now() + 55 * 60 * 1000;
-    
+
     console.log('[Digital Insure] Token obtenu avec succès, expire dans 55 minutes');
   } catch (error: any) {
     console.error('[Digital Insure] Erreur lors de l\'obtention du token:', error.response?.data || error.message);
@@ -60,6 +93,9 @@ async function getAuthenticatedClient(): Promise<AxiosInstance> {
       Authorization: `Bearer ${cachedToken}`,
       "Content-Type": "application/json",
     },
+    // @ts-ignore - httpsAgent pour le support proxy
+    httpsAgent: proxyAgent,
+    proxy: false,
   });
 }
 
@@ -86,7 +122,7 @@ export interface DIInsured {
   };
   countryOfResidence: string;
   cityOfBirth: string;
-  professionalCategory: string; // Ex: "CADRE_SAL", "NON_CADRE_SAL"
+  professionalCategory: string; // Valides: CADRE_SAL, NON_CADRE_SAL_EMPLOYE, CHEF_ENTREPRISE, FONCTIONNAIRE_*, ARTISAN, COMMERCANT, PROF_LIB, RETRAITE, etc.
   smoker: boolean;
   esmoker: boolean;
   esmokerNoNicotine: boolean;
@@ -110,7 +146,7 @@ export interface DIInsured {
 export interface DILoan {
   externalLoanId: string;
   numOrder: number;
-  type: string; // Ex: "IMMO_AMORTISSABLE", "IMMO_IN_FINE"
+  type: string; // Types valides: IMMO_AMORTISSABLE, CREDIT_BAIL, IMMO_IN_FINE, RELAIS, PTZ, IMMO_AMORTISSABLE_AVEC_PALIERS
   amount: number;
   duration: number; // en mois
   residualValue: number;
@@ -121,7 +157,7 @@ export interface DILoan {
   effectiveDate: string; // Format: YYYY-MM-DD
   periodicityInsurance: string; // Ex: "MENSUELLE"
   periodicityRefund: string; // Ex: "MENSUELLE"
-  purposeOfFinancing: string; // Ex: "CREDIT_CONSO", "ACHAT_RP"
+  purposeOfFinancing: string; // Ex: RESI_PRINCIPALE, RESI_SECONDAIRE, INVEST_LOCATIF
   signingDate: string; // Format: YYYY-MM-DD
   bankRef?: {
     bankCode: string;
@@ -136,7 +172,7 @@ export interface DILoan {
 export interface DIRequirement {
   insuredId: string;
   loanId: string;
-  premiumType: string; // Ex: "CRD" (Capital Restant Dû)
+  premiumType: string; // Types valides: "CRD" (dégressive), "CI" (constante)
   coverages: Array<{
     code: string; // Ex: "DCPTIA", "IPT", "IPP", "ITT"
     type: "COVERAGE" | "OPTION";
@@ -256,14 +292,15 @@ export async function getTarifs(
   request: DITarificationRequest
 ): Promise<any> {
   try {
-    console.log('[Digital Insure] getTarifs appelé avec request:', JSON.stringify(request, null, 2));
+    debugLog('[Digital Insure] getTarifs appelé avec request:', JSON.stringify(request, null, 2));
     const client = await getAuthenticatedClient();
-    console.log('[Digital Insure] Client authentifié obtenu, envoi de la requête...');
     const response = await client.post(
       `/rest/v2/ade/tarification/getTarifs`,
       request
     );
-    console.log('[Digital Insure] Réponse reçue:', response.status, 'tarifs:', response.data?.tarifs?.length || 0);
+    const tarifs = response.data?.tarificationResponseModels || [];
+    const validCount = tarifs.filter((t: any) => t.responseStateModel?.businessState === "OK" && t.quoteRateResult).length;
+    console.log('[Digital Insure] Réponse reçue:', response.status, '- Tarifs valides:', validCount);
     return {
       success: true,
       data: response.data,
