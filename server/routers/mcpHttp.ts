@@ -516,7 +516,7 @@ function mapProfessionalCategory(status: string | undefined): string {
 }
 
 // Fonction pour extraire les informations du message avec un prompt simple
-async function extractInfoFromMessage(message: string, existingContext: any = null): Promise<any> {
+export async function extractInfoFromMessage(message: string, existingContext: any = null): Promise<any> {
   const contextInfo = existingContext
     ? `\nInformations déjà collectées:\n${JSON.stringify(existingContext, null, 2)}`
     : "";
