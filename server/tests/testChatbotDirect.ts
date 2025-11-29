@@ -3,6 +3,9 @@
  * Teste l'extraction d'informations et la tarification
  */
 
+// Charger les variables d'environnement
+import "dotenv/config";
+
 import { extractInfoFromMessage } from "../routers/mcpHttp";
 import * as digitalInsureApi from "../api/digitalInsureApi";
 import { buildCoverages, getGarantiesParDefaut, type TypePret } from "../api/garantiesExplications";

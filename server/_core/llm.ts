@@ -1,4 +1,9 @@
 import { ENV } from "./env";
+import { ProxyAgent, fetch as undiciFetch } from "undici";
+
+// Configuration du proxy pour les appels LLM
+const httpsProxy = process.env.https_proxy || process.env.HTTPS_PROXY;
+const proxyAgent = httpsProxy ? new ProxyAgent(httpsProxy) : undefined;
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
 
@@ -280,7 +285,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } = params;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: "gpt-4o-mini", // Meilleur compromis rapidité/fiabilité/coût pour l'extraction
     messages: messages.map(normalizeMessage),
   };
 
@@ -296,10 +301,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
-  }
+  payload.max_tokens = 4096; // Suffisant pour l'extraction de données
 
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,
@@ -312,14 +314,21 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
-  const response = await fetch(resolveApiUrl(), {
+  const fetchOptions: any = {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${ENV.forgeApiKey}`,
     },
     body: JSON.stringify(payload),
-  });
+  };
+
+  // Ajouter le proxy si configuré
+  if (proxyAgent) {
+    fetchOptions.dispatcher = proxyAgent;
+  }
+
+  const response = await undiciFetch(resolveApiUrl(), fetchOptions);
 
   if (!response.ok) {
     const errorText = await response.text();
