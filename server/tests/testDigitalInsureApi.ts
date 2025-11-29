@@ -215,7 +215,7 @@ async function runTests() {
           const premium = tarif.quoteRateResult?.primePeriodiqueDevis || 0;
           const totalCost = tarif.quoteRateResult?.primeGlobaleDevis || 0;
           const taea = tarif.quoteRateResult?.taeaDevis || 0;
-          console.log(`   ✓ ${tarif.productCode}: ${premium.toFixed(2)}€/mois, Total: ${totalCost.toFixed(2)}€, TAEA: ${(taea * 100).toFixed(2)}%`);
+          console.log(`   ✓ ${tarif.productCode}: ${premium.toFixed(2)}€/mois, Total: ${totalCost.toFixed(2)}€, TAEA: ${taea.toFixed(2)}%`);
         } else {
           console.log(`   ? ${tarif.productCode}: état inconnu - ${JSON.stringify(tarif.responseStateModel || {}).substring(0, 200)}`);
         }
@@ -249,7 +249,7 @@ async function runTests() {
           const premium = tarif.quoteRateResult?.primePeriodiqueDevis || 0;
           const totalCost = tarif.quoteRateResult?.primeGlobaleDevis || 0;
           const taea = tarif.quoteRateResult?.taeaDevis || 0;
-          console.log(`   ✓ ${tarif.productCode}: ${premium.toFixed(2)}€/mois, Total: ${totalCost.toFixed(2)}€, TAEA: ${(taea * 100).toFixed(2)}%`);
+          console.log(`   ✓ ${tarif.productCode}: ${premium.toFixed(2)}€/mois, Total: ${totalCost.toFixed(2)}€, TAEA: ${taea.toFixed(2)}%`);
         } else if (tarif.responseStateModel?.businessState === "KO") {
           const errors = tarif.responseStateModel?.businessResponse?.businessErrors || [];
           console.log(`   ⚠️ ${tarif.productCode}: ${errors.map((e: any) => e.controlLabel || e.errorCode).join(", ")}`);
@@ -284,7 +284,7 @@ async function runTests() {
           const premium = tarif.quoteRateResult?.primePeriodiqueDevis || 0;
           const totalCost = tarif.quoteRateResult?.primeGlobaleDevis || 0;
           const taea = tarif.quoteRateResult?.taeaDevis || 0;
-          console.log(`   ✓ ${tarif.productCode}: ${premium.toFixed(2)}€/mois, Total: ${totalCost.toFixed(2)}€, TAEA: ${(taea * 100).toFixed(2)}%`);
+          console.log(`   ✓ ${tarif.productCode}: ${premium.toFixed(2)}€/mois, Total: ${totalCost.toFixed(2)}€, TAEA: ${taea.toFixed(2)}%`);
         } else if (tarif.responseStateModel?.businessState === "KO") {
           const errors = tarif.responseStateModel?.businessResponse?.businessErrors || [];
           console.log(`   ⚠️ ${tarif.productCode}: ${errors.map((e: any) => e.controlLabel || e.errorCode).join(", ")}`);
